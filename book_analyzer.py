@@ -5,6 +5,9 @@ from typing import List, Dict, Tuple
 import sys
 import os
 from epub_extractor import EpubExtractor
+from cost_calculator import (
+    CalculateCost,
+)
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download("punkt")
@@ -27,6 +30,11 @@ class EpubWordAnalyzer:
         sorted_frequency = dict(frequency.most_common())
         return sorted_frequency
 
+    def calculate_book_cost(self, model_name: str) -> float:
+        full_text = " ".join([" ".join(chapter) for chapter in self.chapters])
+        calculator = CalculateCost(model_name)
+        return calculator.calculate_cost(full_text)
+
     def write_word_statistics(self, output_file: str) -> None:
         total_word_count, chapter_word_counts = self.get_word_counts()
         word_frequencies = self.get_word_frequency()
@@ -36,6 +44,11 @@ class EpubWordAnalyzer:
 
             for i, count in enumerate(chapter_word_counts):
                 file.write(f"Chapter {i+1} Word Count: {count}\n")
+
+            file.write("\nCost Calculations for each model:\n")
+            for model in CalculateCost.model_costs:
+                cost = self.calculate_book_cost(model)
+                file.write(f"Cost for {model}: {cost:.6f}\n")
 
             file.write("\nWord Frequencies (entire book):\n")
             for word, frequency in word_frequencies.items():
