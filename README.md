@@ -5,9 +5,9 @@ It's very hard to come back to a 700 page book after reading it and remember all
 
 
 ## Requirements
-So I'd like a system to:
+I'd like a system to:
 - give chapter by chapter summaries
-- help me find key arguments, facts, and quotes
+- help me find and remember key arguments, facts, and quotes
 
 Summaries should be an intelligent synthesis, organized by the topics covered alongside the author's thoughts on each topic.
 
