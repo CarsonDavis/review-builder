@@ -1,7 +1,7 @@
 import tiktoken
 
 
-class CalculateCost:
+class CostCalculator:
     model_costs: dict[str, float] = {
         "gpt-4o": 5 / 1000000,
         "gpt-3.5-turbo": 0.5 / 1000000,

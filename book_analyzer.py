@@ -6,7 +6,7 @@ import sys
 import os
 from epub_extractor import EpubExtractor
 from cost_calculator import (
-    CalculateCost,
+    CostCalculator,
 )
 
 # Ensure necessary NLTK resources are downloaded
@@ -32,7 +32,7 @@ class EpubWordAnalyzer:
 
     def calculate_book_cost(self, model_name: str) -> float:
         full_text = " ".join([" ".join(chapter) for chapter in self.chapters])
-        calculator = CalculateCost(model_name)
+        calculator = CostCalculator(model_name)
         return calculator.calculate_cost(full_text)
 
     def write_word_statistics(self, output_file: str) -> None:
@@ -46,7 +46,7 @@ class EpubWordAnalyzer:
                 file.write(f"Chapter {i+1} Word Count: {count}\n")
 
             file.write("\nCost Calculations for each model:\n")
-            for model in CalculateCost.model_costs:
+            for model in CostCalculator.model_costs:
                 cost = self.calculate_book_cost(model)
                 file.write(f"Cost for {model}: {cost:.6f}\n")
 
