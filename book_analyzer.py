@@ -13,11 +13,15 @@ from cost_calculator import (
 nltk.download("punkt")
 
 
-class EpubWordAnalyzer:
-    def __init__(self, epub_file: str):
-        self.extractor = EpubExtractor(epub_file)
+class BookAnalyzer:
+    def __init__(self, epub_path: str):
+        self.epub_path = epub_path
+        self.extractor = EpubExtractor(epub_path)
         self.chapters = self.extractor._get_chapters()
         self.tokenized_chapters = [word_tokenize(chapter) for chapter in self.chapters]
+
+    def _generate_default_save_path(self) -> str:
+        return os.path.splitext(self.epub_path)[0] + "_stats.md"
 
     def get_word_counts(self) -> Tuple[int, List[int]]:
         total_word_count = sum(len(tokens) for tokens in self.tokenized_chapters)
@@ -44,21 +48,15 @@ class EpubWordAnalyzer:
         calculator = CostCalculator(model_name)
         return calculator.calculate_cost(full_text)
 
-    def write_word_statistics(self, output_file: str) -> None:
+    def write_word_statistics(self, save_path: str = None) -> None:
+        save_path = save_path or self._generate_default_save_path()
         total_word_count, chapter_word_counts = self.get_word_counts()
         token_counts = self.get_token_counts()
         word_frequencies = self.get_word_frequency()
 
         models = list(token_counts.keys())
 
-    def write_word_statistics(self, output_file: str) -> None:
-        total_word_count, chapter_word_counts = self.get_word_counts()
-        token_counts = self.get_token_counts()
-        word_frequencies = self.get_word_frequency()
-
-        models = list(token_counts.keys())
-
-        with open(output_file, "w") as file:
+        with open(save_path, "w") as file:
             file.write(f"# Book Statistics\n\n")
 
             file.write("\n## Overview\n\n")
@@ -92,14 +90,14 @@ class EpubWordAnalyzer:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python epub_word_analyzer.py <epub_file>")
+        print("Usage: python epub_word_analyzer.py <epub_path>")
         sys.exit(1)
 
-    epub_file = sys.argv[1]
+    epub_path = sys.argv[1]
 
     try:
-        analyzer = EpubWordAnalyzer(epub_file)
-        output_file = os.path.splitext(epub_file)[0] + "_word_stats.md"
+        analyzer = BookAnalyzer(epub_path)
+        output_file = os.path.splitext(epub_path)[0] + "_word_stats.md"
         analyzer.write_word_statistics(output_file)
         print(f"Word statistics extracted and saved to {output_file}")
     except FileNotFoundError as e:
