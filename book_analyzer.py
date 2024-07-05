@@ -24,6 +24,15 @@ class EpubWordAnalyzer:
         chapter_word_counts = [len(tokens) for tokens in self.tokenized_chapters]
         return total_word_count, chapter_word_counts
 
+    def get_token_counts(self) -> Dict[str, Tuple[int, List[int]]]:
+        token_counts = {}
+        for model in CostCalculator.model_costs:
+            calculator = CostCalculator(model)
+            total_token_count = sum(len(calculator.encoding.encode(chapter)) for chapter in self.chapters)
+            chapter_token_counts = [len(calculator.encoding.encode(chapter)) for chapter in self.chapters]
+            token_counts[model] = (total_token_count, chapter_token_counts)
+        return token_counts
+
     def get_word_frequency(self) -> Dict[str, int]:
         all_tokens = [token for tokens in self.tokenized_chapters for token in tokens]
         frequency = Counter(all_tokens)
@@ -37,22 +46,48 @@ class EpubWordAnalyzer:
 
     def write_word_statistics(self, output_file: str) -> None:
         total_word_count, chapter_word_counts = self.get_word_counts()
+        token_counts = self.get_token_counts()
         word_frequencies = self.get_word_frequency()
 
+        models = list(token_counts.keys())
+
+    def write_word_statistics(self, output_file: str) -> None:
+        total_word_count, chapter_word_counts = self.get_word_counts()
+        token_counts = self.get_token_counts()
+        word_frequencies = self.get_word_frequency()
+
+        models = list(token_counts.keys())
+
         with open(output_file, "w") as file:
-            file.write(f"Total Word Count: {total_word_count}\n\n")
+            file.write(f"# Book Statistics\n\n")
 
-            for i, count in enumerate(chapter_word_counts):
-                file.write(f"Chapter {i+1} Word Count: {count}\n")
+            file.write("\n## Overview\n\n")
+            file.write(f"Total Word Count: {total_word_count:,}\n\n")
 
-            file.write("\nCost Calculations for each model:\n")
+            file.write("| Model | Cost |\n")
+            file.write("|-------|------|\n")
             for model in CostCalculator.model_costs:
                 cost = self.calculate_book_cost(model)
-                file.write(f"Cost for {model}: {cost:.6f}\n")
+                file.write(f"| {model} | ${cost:.2f} |\n")
+            file.write("\n")
 
-            file.write("\nWord Frequencies (entire book):\n")
-            for word, frequency in word_frequencies.items():
-                file.write(f"{word}: {frequency}\n")
+            file.write(f"## Word and Token Counts per Chapter\n\n")
+            file.write("| Chapter | Words | " + " | ".join(f"{model} Tokens" for model in models) + " |\n")
+            file.write("|---------|------------|" + " | ".join(["-------------"] * len(models)) + "|\n")
+
+            for i, word_count in enumerate(chapter_word_counts):
+                formatted_word_count = f"{word_count:,}"
+                token_counts_row = " | ".join(f"{token_counts[model][1][i]:,}" for model in models)
+                file.write(f"| {i+1} | {formatted_word_count} | {token_counts_row} |\n")
+
+            file.write(f"## Word Frequencies (First 200 Words)\n\n")
+            file.write("| Word | Frequency |\n")
+            file.write("|------|-----------|\n")
+            for i, (word, frequency) in enumerate(word_frequencies.items()):
+                if i >= 200:
+                    break
+                file.write(f"| {word} | {frequency} |\n")
+            file.write("\n")
 
 
 if __name__ == "__main__":
@@ -64,7 +99,7 @@ if __name__ == "__main__":
 
     try:
         analyzer = EpubWordAnalyzer(epub_file)
-        output_file = os.path.splitext(epub_file)[0] + "_word_stats.txt"
+        output_file = os.path.splitext(epub_file)[0] + "_word_stats.md"
         analyzer.write_word_statistics(output_file)
         print(f"Word statistics extracted and saved to {output_file}")
     except FileNotFoundError as e:
