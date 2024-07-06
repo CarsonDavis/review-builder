@@ -78,7 +78,7 @@ summarizer.log_recent_experiment("custom_prompting_log.md")
 
 ### BookAnalyzer
 
-The `BookAnalyzer` class analyzes the text extracted from an EPUB file, providing word and token counts, word frequencies, and cost calculations for processing the book with different models.
+The `BookAnalyzer` class analyzes the text extracted from an EPUB file, providing word and token counts, word frequencies, and cost calculations for processing the book with different models. If you are worried about costs, you may want to run this before using the `BookSummarizer`. An example output can be found in [example_book_statistics.md](example_book_statistics.md).
 
 #### Usage
 
