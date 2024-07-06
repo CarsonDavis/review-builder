@@ -16,7 +16,7 @@ class BookSummarizer:
     def __init__(self, epub_path):
         self.epub_path = epub_path
         self.extractor = EpubExtractor(epub_path)
-        self.chapters = self.extractor.extract()
+        self.chapters = self.extractor.chapters
         self.recent_experiment = None
 
     def summarize_text(self, text, model="gpt-3.5-turbo", system_prompt=None, instruction=None):
