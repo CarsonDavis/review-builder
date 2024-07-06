@@ -29,7 +29,7 @@ class BookSummarizer:
         self.recent_experiment = {
             "model": model,
             "system_prompt": system_prompt,
-            "instruction": instruction,
+            "instruction": instruction or self.DEFAULT_INSTRUCTION_PROMPT,
             "summary": summary,
             "text": text,
         }
