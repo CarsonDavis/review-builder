@@ -6,7 +6,7 @@ import tiktoken
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from epub_extractor import EpubExtractor
+from .epub_extractor import EpubExtractor
 
 # Load the API key which OpenAI will read from the environment
 load_dotenv()

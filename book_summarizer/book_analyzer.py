@@ -4,8 +4,8 @@ from collections import Counter
 from typing import List, Dict, Tuple
 import sys
 import os
-from epub_extractor import EpubExtractor
-from cost_calculator import (
+from .epub_extractor import EpubExtractor
+from .cost_calculator import (
     CostCalculator,
 )
 
