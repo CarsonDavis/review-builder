@@ -1,6 +1,5 @@
 import datetime
-import os
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import tiktoken
 from dotenv import load_dotenv
@@ -121,8 +120,8 @@ class BookSummarizer:
         self,
         text: str,
         model: str = "gpt-3.5-turbo",
-        custom_system_prompt: Optional[str] = None,
-        custom_instruction: Optional[str] = None,
+        custom_system_prompt: str | None = None,
+        custom_instruction: str | None = None,
     ) -> str:
         """
         Summarizes the given text using the specified model. Does not handle chunking.
@@ -158,7 +157,7 @@ class BookSummarizer:
         text: str,
         summarizer_model: str = "gpt-3.5-turbo",
         combiner_model: str = "gpt-4o",
-        custom_combiner_prompt: Optional[str] = None,
+        custom_combiner_prompt: str | None = None,
     ) -> str:
         """
         Summarizes the given text by chunking it and then combining the chunk summaries.
@@ -192,8 +191,8 @@ class BookSummarizer:
         self,
         output_filename: str = "book_summary.md",
         model: str = "gpt-3.5-turbo",
-        system_prompt: Optional[str] = None,
-        instruction: Optional[str] = None,
+        system_prompt: str | None = None,
+        instruction: str | None = None,
     ) -> None:
         """
         Summarizes the entire book and saves the summary to a file.

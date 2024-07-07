@@ -1,4 +1,5 @@
 import pytest
+
 from book_summarizer import CostCalculator
 
 

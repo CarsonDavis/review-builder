@@ -1,8 +1,8 @@
-import pytest
-import os
-from ebooklib import epub
-from book_summarizer.epub_extractor import EpubExtractor
 from pathlib import Path
+
+import pytest
+
+from book_summarizer.epub_extractor import EpubExtractor
 
 
 @pytest.fixture

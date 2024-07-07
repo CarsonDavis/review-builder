@@ -1,9 +1,10 @@
-import pytest
-from collections import Counter
-from unittest.mock import patch, MagicMock
-from book_summarizer.book_analyzer import BookAnalyzer
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from book_summarizer.book_analyzer import BookAnalyzer
 
 
 @pytest.fixture
@@ -88,7 +89,7 @@ def test_write_statistics(analyzer: BookAnalyzer, tmp_path: Path) -> None:
     output_path = tmp_path / "output_stats.md"
     analyzer.write_statistics(output_path)
     assert output_path.exists()
-    with open(output_path, "r") as f:
+    with open(output_path) as f:
         content = f.read()
     assert "# Book Statistics" in content
     assert "## Overview" in content

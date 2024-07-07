@@ -1,11 +1,12 @@
+import os
+import sys
+from collections import Counter
+
 import nltk
 from nltk.tokenize import word_tokenize
-from collections import Counter
-from typing import List, Dict, Tuple
-import sys
-import os
-from .epub_extractor import EpubExtractor
+
 from .cost_calculator import CostCalculator
+from .epub_extractor import EpubExtractor
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download("punkt")
@@ -21,12 +22,12 @@ class BookAnalyzer:
     def _default_save_path(self) -> str:
         return os.path.splitext(self.epub_path)[0] + "_stats.md"
 
-    def word_counts(self) -> Tuple[int, List[int]]:
+    def word_counts(self) -> tuple[int, list[int]]:
         total_word_count = sum(len(tokens) for tokens in self.tokenized_chapters)
         chapter_word_counts = [len(tokens) for tokens in self.tokenized_chapters]
         return total_word_count, chapter_word_counts
 
-    def token_counts(self) -> Dict[str, Tuple[int, List[int]]]:
+    def token_counts(self) -> dict[str, tuple[int, list[int]]]:
         token_counts = {}
         for model in CostCalculator.VALID_MODELS:
             calculator = CostCalculator(model)
@@ -35,7 +36,7 @@ class BookAnalyzer:
             token_counts[model] = (total_token_count, chapter_token_counts)
         return token_counts
 
-    def word_frequencies(self) -> Dict[str, int]:
+    def word_frequencies(self) -> dict[str, int]:
         all_tokens = [token for tokens in self.tokenized_chapters for token in tokens]
         frequency = Counter(all_tokens)
         return dict(frequency.most_common())
@@ -54,7 +55,7 @@ class BookAnalyzer:
         models = list(token_counts.keys())
 
         with open(save_path, "w") as file:
-            file.write(f"# Book Statistics\n\n")
+            file.write("# Book Statistics\n\n")
             file.write("## Overview\n\n")
             file.write(f"Total Word Count: {total_word_count:,}\n\n")
 
