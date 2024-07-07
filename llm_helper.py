@@ -88,7 +88,7 @@ class BookSummarizer:
         Returns:
             list[str]: A list of text chunks.
         """
-        max_tokens = self.ACCEPTABLE_MODELS[model]
+        max_tokens = self.ACCEPTABLE_MODELS[model]["max_tokens"]
         tokens = self._tokenize_text(text, model)
         tokenized_chunks = self._chunk_tokens(tokens, max_tokens, self.CHUNK_OVERLAP)
         encoding = tiktoken.encoding_for_model(model)
@@ -182,7 +182,7 @@ class BookSummarizer:
 
         combined_summary = self.summarize_text(
             text=appended_summaries,
-            instruction=custom_combiner_prompt or self.DEFAULT_COMBINER_PROMPT,
+            custom_instruction=custom_combiner_prompt or self.DEFAULT_COMBINER_PROMPT,
             model=combiner_model,
         )
         return combined_summary
@@ -206,7 +206,7 @@ class BookSummarizer:
         """
         with open(output_filename, "w") as file:
             for index, chapter in enumerate(self.chapters):
-                summary = self.summarize_text(chapter, model, system_prompt, instruction)
+                summary = self.summarize_text_with_chunking(chapter, model, system_prompt, instruction)
                 file.write(f"## Chapter {index + 1}\n")
                 file.write(summary)
                 file.write("\n\n")
