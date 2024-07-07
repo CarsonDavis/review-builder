@@ -1,14 +1,28 @@
-from openai import OpenAI
-from epub_extractor import EpubExtractor
-from dotenv import load_dotenv
 import datetime
 import os
+from typing import Callable, Optional
+
 import tiktoken
-from typing import Optional
+from dotenv import load_dotenv
+from openai import OpenAI
+
+from epub_extractor import EpubExtractor
 
 # Load the API key which OpenAI will read from the environment
 load_dotenv()
 client = OpenAI()
+
+
+def validate_model_name(func: Callable) -> Callable:
+    """Decorator to validate the model argument."""
+
+    def wrapper(self, *args, **kwargs):
+        model = kwargs.get("model") or (args[1] if len(args) > 1 else None)
+        if model not in self.ACCEPTABLE_MODELS:
+            raise ValueError(f"Model {model} is not known. Choose from {list(self.ACCEPTABLE_MODELS.keys())}.")
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class BookSummarizer:
@@ -17,10 +31,11 @@ class BookSummarizer:
     DEFAULT_COMBINER_PROMPT = "I will provide you with several summaries of different parts of a chapter. Combine these summaries into one single summary."
 
     SUMMARY_SIZE = 1500  # gpt-3.5-turbo summaries for 12k chapters were 500 tokens. 1500 should be safe.
-    CHUNK_SIZES = {"gpt-3.5-turbo": 16385 - SUMMARY_SIZE, "gpt-4o": 128000 - SUMMARY_SIZE}
-
-    MAX_TOKENS = 300
-    OVERLAP = 50
+    ACCEPTABLE_MODELS = {
+        "gpt-3.5-turbo": {"max_tokens": 16385 - SUMMARY_SIZE},
+        "gpt-4o": {"max_tokens": 128000 - SUMMARY_SIZE},
+    }
+    CHUNK_OVERLAP = 50
 
     def __init__(self, epub_path: str):
         self.epub_path = epub_path
@@ -61,6 +76,7 @@ class BookSummarizer:
                 break
         return chunks
 
+    @validate_model_name
     def chunk_text(self, text: str, model: str) -> list[str]:
         """
         Chunks the input text into smaller pieces based on token limits, including overlap.
@@ -72,11 +88,13 @@ class BookSummarizer:
         Returns:
             list[str]: A list of text chunks.
         """
+        max_tokens = self.ACCEPTABLE_MODELS[model]
         tokens = self._tokenize_text(text, model)
-        tokenized_chunks = self._chunk_tokens(tokens, self.MAX_TOKENS, self.OVERLAP)
+        tokenized_chunks = self._chunk_tokens(tokens, max_tokens, self.CHUNK_OVERLAP)
         encoding = tiktoken.encoding_for_model(model)
         return [encoding.decode(chunk) for chunk in tokenized_chunks]
 
+    @validate_model_name
     def _call_gpt(self, model: str, system_prompt: str, instruction: str) -> str:
         """
         Calls the GPT model with specified prompts and returns the completion.
@@ -98,6 +116,7 @@ class BookSummarizer:
         )
         return completion.choices[0].message.content
 
+    @validate_model_name
     def summarize_text(
         self,
         text: str,
@@ -133,6 +152,7 @@ class BookSummarizer:
         }
         return summary
 
+    @validate_model_name
     def summarize_text_with_chunking(
         self,
         text: str,
@@ -167,6 +187,7 @@ class BookSummarizer:
         )
         return combined_summary
 
+    @validate_model_name
     def summarize_book(
         self,
         output_filename: str = "book_summary.md",
