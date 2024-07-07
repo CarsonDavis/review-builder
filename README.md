@@ -68,7 +68,9 @@ custom_instruction = (
     "Highlight the key economic arguments Orwell makes in this chapter. Provide examples and evidence he uses."
 )
 custom_summary = summarizer.summarize_text(
-    summarizer.chapters[1], system_prompt=custom_system_prompt, instruction=custom_instruction
+    summarizer.chapters[1],
+    custom_system_prompt=custom_system_prompt,
+    custom_instruction=custom_instruction,
 )
 print(custom_summary)
 
