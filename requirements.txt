@@ -5,3 +5,5 @@ openai
 python-dotenv
 tiktoken
 pytest
+pytest-mock
+pre-commit
