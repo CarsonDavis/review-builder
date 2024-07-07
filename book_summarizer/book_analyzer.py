@@ -28,7 +28,7 @@ class BookAnalyzer:
 
     def token_counts(self) -> Dict[str, Tuple[int, List[int]]]:
         token_counts = {}
-        for model in CostCalculator.model_costs:
+        for model in CostCalculator.VALID_MODELS:
             calculator = CostCalculator(model)
             total_token_count = sum(len(calculator.encoding.encode(chapter)) for chapter in self.chapters)
             chapter_token_counts = [len(calculator.encoding.encode(chapter)) for chapter in self.chapters]
@@ -60,7 +60,7 @@ class BookAnalyzer:
 
             file.write("| Model | Cost |\n")
             file.write("|-------|------|\n")
-            for model in CostCalculator.model_costs:
+            for model in CostCalculator.VALID_MODELS:
                 cost = self.calculate_cost(model)
                 file.write(f"| {model} | ${cost:.2f} |\n")
             file.write("\n")
