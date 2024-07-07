@@ -251,9 +251,9 @@ if __name__ == "__main__":
         "Highlight the key economic arguments Orwell makes in this chapter. Provide examples and evidence he uses."
     )
     custom_summary = summarizer.summarize_text(
-        chapters[1], system_prompt=custom_system_prompt, instruction=custom_instruction
+        chapters[1], system_prompt=custom_system_prompt, custom_instruction=custom_instruction
     )
     print(custom_summary)
 
     # Log the most recent experiment
-    summarizer.log_most_recent_experiment("custom_prompting_log.md")
+    summarizer.log_recent_experiment("custom_prompting_log.md")
