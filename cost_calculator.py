@@ -13,6 +13,8 @@ class CostCalculator:
         The name of the model to use for calculations.
     encoding : object
         The encoding object used to tokenize text for the specified model.
+    token_count : int
+        Number of tokens in the text. Will be 0 until the text is tokenized.
     """
 
     model_costs: dict[str, float] = {
@@ -32,6 +34,7 @@ class CostCalculator:
         self.model_name: str = model_name
         self._validate_model_name()
         self.encoding = tiktoken.encoding_for_model(model_name)
+        self.num_tokens: int = 0
 
     def _validate_model_name(self) -> None:
         """
@@ -71,7 +74,8 @@ class CostCalculator:
             The number of tokens.
         """
         tokens = self.encoding.encode(text)
-        return len(tokens)
+        self.num_tokens = len(tokens)
+        return self.num_tokens
 
     def calculate_cost(self, text: str) -> float:
         """
