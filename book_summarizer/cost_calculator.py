@@ -3,23 +3,23 @@ import tiktoken
 
 class CostCalculator:
     """
-    A class used to calculate the cost of processing text with different openai models.
+    A class used to calculate the cost of processing text with different OpenAI models.
 
     Attributes
     ----------
-    model_costs : dict
+    VALID_MODELS : dict
         A dictionary containing the cost per token for different models.
     model_name : str
         The name of the model to use for calculations.
     encoding : object
         The encoding object used to tokenize text for the specified model.
-    token_count : int
+    num_tokens : int
         Number of tokens in the text. Will be 0 until the text is tokenized.
     """
 
-    model_costs: dict[str, float] = {
-        "gpt-4o": 5 / 1000000,
-        "gpt-3.5-turbo": 0.5 / 1000000,
+    VALID_MODELS = {
+        "gpt-4o": {"cost_per_token": 5 / 1000000},
+        "gpt-3.5-turbo": {"cost_per_token": 0.5 / 1000000},
     }
 
     def __init__(self, model_name: str):
@@ -38,14 +38,14 @@ class CostCalculator:
 
     def _validate_model_name(self) -> None:
         """
-        Validates if the provided model name exists in the model costs dictionary.
+        Validates if the provided model name exists in the valid models dictionary.
 
         Raises
         ------
         ValueError
-            If the model name does not exist in the model costs dictionary.
+            If the model name does not exist in the valid models dictionary.
         """
-        if self.model_name not in self.model_costs:
+        if self.model_name not in self.VALID_MODELS:
             raise ValueError(f"No cost data for {self.model_name}")
 
     def _get_cost_per_token(self) -> float:
@@ -57,7 +57,7 @@ class CostCalculator:
         float
             The cost per token.
         """
-        return self.model_costs[self.model_name]
+        return self.VALID_MODELS[self.model_name]["cost_per_token"]
 
     def count_tokens(self, text: str) -> int:
         """
@@ -97,5 +97,5 @@ class CostCalculator:
 
 
 # Example usage:
-# calculator = CalculateCost("gpt-3.5-turbo")
+# calculator = CostCalculator("gpt-3.5-turbo")
 # print(calculator.calculate_cost("Some sample text to encode."))

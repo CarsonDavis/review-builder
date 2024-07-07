@@ -18,8 +18,8 @@ def validate_model_name(func: Callable) -> Callable:
 
     def wrapper(self, *args, **kwargs):
         model = kwargs.get("model") or (args[1] if len(args) > 1 else None)
-        if model not in self.ACCEPTABLE_MODELS:
-            raise ValueError(f"Model {model} is not known. Choose from {list(self.ACCEPTABLE_MODELS.keys())}.")
+        if model not in self.VALID_MODELS:
+            raise ValueError(f"Model {model} is not known. Choose from {list(self.VALID_MODELS.keys())}.")
         return func(self, *args, **kwargs)
 
     return wrapper
@@ -31,7 +31,7 @@ class BookSummarizer:
     DEFAULT_COMBINER_PROMPT = "I will provide you with several summaries of different parts of a chapter. Combine these summaries into one single summary."
 
     SUMMARY_SIZE = 1500  # gpt-3.5-turbo summaries for 12k chapters were 500 tokens. 1500 should be safe.
-    ACCEPTABLE_MODELS = {
+    VALID_MODELS = {
         "gpt-3.5-turbo": {"max_tokens": 16385 - SUMMARY_SIZE},
         "gpt-4o": {"max_tokens": 128000 - SUMMARY_SIZE},
     }
@@ -88,7 +88,7 @@ class BookSummarizer:
         Returns:
             list[str]: A list of text chunks.
         """
-        max_tokens = self.ACCEPTABLE_MODELS[model]["max_tokens"]
+        max_tokens = self.VALID_MODELS[model]["max_tokens"]
         tokens = self._tokenize_text(text, model)
         tokenized_chunks = self._chunk_tokens(tokens, max_tokens, self.CHUNK_OVERLAP)
         encoding = tiktoken.encoding_for_model(model)
