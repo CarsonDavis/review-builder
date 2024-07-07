@@ -91,16 +91,16 @@ from book_analyzer import BookAnalyzer
 analyzer = BookAnalyzer("path/to/your/book.epub")
 
 # The primary output is a well-formatted markdown file containing costs, word counts, and frequencies
-analyzer.write_word_statistics("book_stats.md")
+analyzer.write_statistics("book_stats.md")
 ```
 
 You can also retrieve specific information from the analyzer object:
 
 ```python
-analyzer.get_word_counts()
-analyzer.get_token_counts()
-analyzer.get_word_frequency()
-analyzer.calculate_book_cost("gpt-3.5-turbo")
+analyzer.word_counts()
+analyzer.token_counts()
+analyzer.word_frequency()
+analyzer.calculate_cost("gpt-3.5-turbo")
 ```
 
 
