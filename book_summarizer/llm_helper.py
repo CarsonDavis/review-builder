@@ -1,7 +1,6 @@
 import datetime
+import os
 import time
-from collections.abc import Callable
-from functools import wraps
 
 import tiktoken
 from dotenv import load_dotenv
@@ -9,32 +8,11 @@ from joblib import Parallel, delayed
 from openai import OpenAI
 
 from .epub_extractor import EpubExtractor
+from .helper_functions import find_boolean_in_string, validate_model_name
 
 # Load the API key which OpenAI will read from the environment
 load_dotenv()
 client = OpenAI()
-
-
-def validate_model_name(func: Callable) -> Callable:
-    """Decorator to validate any argument containing the word 'model'."""
-
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        # Extract all keyword arguments that contain 'model' in their name
-        model_kwargs = {k: v for k, v in kwargs.items() if "model" in k}
-        # Extract all positional arguments that contain 'model' in their name (assuming standard naming conventions)
-        model_args = [arg for name, arg in zip(func.__code__.co_varnames[1:], args) if "model" in name]
-
-        # Combine all found model arguments
-        all_models = list(model_kwargs.values()) + model_args
-
-        for model in all_models:
-            if model not in self.VALID_MODELS:
-                raise ValueError(f"Model {model} is not known. Choose from {list(self.VALID_MODELS.keys())}.")
-
-        return func(self, *args, **kwargs)
-
-    return wrapper
 
 
 def summarize_chapter(
@@ -72,11 +50,11 @@ def summarize_chapter(
 
 
 class BookSummarizer:
-    DEFAULT_SYSTEM_PROMPT = (
+    DEFAULT_SUMMARIZER_PROMPT = (
         "You are a skilled textual analyst that can synthesize the key concepts in "
         "long text and identify crucial details to retain."
     )
-    DEFAULT_INSTRUCTION_PROMPT = (
+    DEFAULT_SUMMARIZER_INSTRUCTION = (
         "Make a list of the key points made by the author in the following chapter. "
         "Under each point, list out the reasons or evidence given."
     )
@@ -85,6 +63,25 @@ class BookSummarizer:
         "Combine these summaries into one single summary. The final summary should "
         "have a list of the key points made by the author in the following chapter. "
         "Under each point, list out the reasons or evidence given."
+    )
+    DEFAULT_CHAPTER_PROMPT = (
+        "Your job is to deduce the title of a section of a book based on its content. "
+        "It may be a Title page, Index, Chapter, Copyright Page or any other part of a book. "
+        "Respond only with the title you have deduced and nothing else."
+        "If the chapter has a number, put it before the chapter title, as in Chapter 2: A New Dawn"
+        "If the content is not a clearly defined section of a book, write 'unknown'"
+    )
+    DEFAULT_CHAPTER_INSTRUCTION = (
+        "Here are the first 500 characters of a section of a book. Please deduce the title of this section:"
+    )
+    DEFAULT_WORTHINESS_PROMPT = (
+        "Your job is to evaluate a sample of text to see if it is part of a section worth summarizing."
+        "You respond only with boolean values: 'True' if the text is worth summarizing, 'False' if it is not."
+    )
+    DEFAULT_WORTHINESS_INSTRUCTION = (
+        "Here is are the first 500 characters of a section of a book. "
+        "Respond True if the section is a chapter, preface, or other section worth summarizing. "
+        "Respond False if the section is a title page, table of contents, or otherwise not worth summarizing."
     )
     DEFAULT_SUMMARIZER_MODEL = "gpt-3.5-turbo"
     DEFAULT_COMBINER_MODEL = "gpt-4o"
@@ -102,6 +99,10 @@ class BookSummarizer:
         self.chapters = self.extractor.chapters
         self.recent_experiment = None
 
+    def _default_save_path(self) -> str:
+        return os.path.splitext(self.epub_path)[0] + "_summary.md"
+
+    @validate_model_name
     def _tokenize_text(self, text: str, model: str) -> list[int]:
         """
         Tokenizes the input text using the specified model's encoding.
@@ -134,6 +135,53 @@ class BookSummarizer:
             if i + chunk_size >= len(tokens):
                 break
         return chunks
+
+    @validate_model_name
+    def _deduce_worthiness(
+        self,
+        chapter_text: str,
+        characters: int,
+        model: str = "gpt-3.5-turbo",
+        system_prompt: str | None = None,
+        instruction: str | None = None,
+    ) -> str:
+
+        system_prompt = system_prompt or self.DEFAULT_WORTHINESS_PROMPT
+        instruction = instruction or self.DEFAULT_WORTHINESS_INSTRUCTION
+
+        instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
+
+        worthiness_boolean = self._call_gpt(model=model, system_prompt=system_prompt, instruction=instruction_with_text)
+
+        return find_boolean_in_string(worthiness_boolean)
+
+    @validate_model_name
+    def _deduce_chapter_title(
+        self,
+        chapter_text: str,
+        characters: int,
+        model: str = "gpt-4o",
+        system_prompt: str | None = None,
+        instruction: str | None = None,
+    ) -> str:
+        """
+        Deduces the chapter title from the beginning of the chapter text.
+
+        Args:
+            chapter_text (str): The text of the chapter.
+            characters (int): The number of characters in the chapter to use for the deduction.
+
+        Returns:
+            str: The deduced chapter title.
+        """
+        system_prompt = system_prompt or self.DEFAULT_CHAPTER_PROMPT
+        instruction = instruction or self.DEFAULT_CHAPTER_INSTRUCTION
+
+        instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
+
+        chapter_title = self._call_gpt(model=model, system_prompt=system_prompt, instruction=instruction_with_text)
+
+        return chapter_title
 
     @validate_model_name
     def chunk_text(self, text: str, model: str) -> list[str]:
@@ -197,16 +245,16 @@ class BookSummarizer:
             str: The generated summary.
         """
         model = model or self.DEFAULT_SUMMARIZER_MODEL
-        system_prompt = custom_system_prompt or self.DEFAULT_SYSTEM_PROMPT
+        system_prompt = custom_system_prompt or self.DEFAULT_SUMMARIZER_PROMPT
         instruction_with_text = (
-            f"{custom_instruction}\n{text}" if custom_instruction else f"{self.DEFAULT_INSTRUCTION_PROMPT}\n{text}"
+            f"{custom_instruction}\n{text}" if custom_instruction else f"{self.DEFAULT_SUMMARIZER_INSTRUCTION}\n{text}"
         )
 
         summary = self._call_gpt(model=model, system_prompt=system_prompt, instruction=instruction_with_text)
         self.recent_experiment = {
             "model": model,
             "system_prompt": system_prompt,
-            "instruction": custom_instruction or self.DEFAULT_INSTRUCTION_PROMPT,
+            "instruction": custom_instruction or self.DEFAULT_SUMMARIZER_INSTRUCTION,
             "summary": summary,
             "text": text,
         }
@@ -255,7 +303,7 @@ class BookSummarizer:
             combined_summary = self.summarize_text(
                 text=appended_summaries,
                 model=combiner_model or self.DEFAULT_COMBINER_MODEL,
-                custom_system_prompt=custom_summarizer_prompt or self.DEFAULT_SYSTEM_PROMPT,
+                custom_system_prompt=custom_summarizer_prompt or self.DEFAULT_SUMMARIZER_PROMPT,
                 custom_instruction=custom_combiner_prompt or self.DEFAULT_COMBINER_PROMPT,
             )
         else:
@@ -263,10 +311,15 @@ class BookSummarizer:
 
         return combined_summary
 
+    def gpt_chapter_metadata(self, chapter, deduction_limit):
+        title = self._deduce_chapter_title(chapter, deduction_limit)
+        worthiness = self._deduce_worthiness(chapter, deduction_limit)
+        return {"title": title, "worthiness": worthiness, "chapter": chapter}
+
     @validate_model_name
     def summarize_book(
         self,
-        output_filename: str = "book_summary.md",
+        output_filename: str | None = None,
         summarizer_model: str = "gpt-3.5-turbo",
         custom_summarizer_prompt: str | None = None,
         custom_summarizer_instruction: str | None = None,
@@ -285,7 +338,17 @@ class BookSummarizer:
             custom_combiner_prompt (Optional[str]): Custom prompt for the combiner model.
         """
 
-        results = Parallel(n_jobs=-1)(
+        chapter_metadata = Parallel(n_jobs=-1)(
+            delayed(self.gpt_chapter_metadata)(chapter, 500) for chapter in self.chapters
+        )
+
+        # Filter chapters based on worthiness
+        worthy_chapters = [
+            (index, meta["chapter"]) for index, meta in enumerate(chapter_metadata) if meta["worthiness"]
+        ]
+
+        # Parallelize the summarization process
+        summarized_results = Parallel(n_jobs=-1)(
             delayed(summarize_chapter)(
                 chapter,
                 summarizer_model,
@@ -295,18 +358,18 @@ class BookSummarizer:
                 custom_combiner_prompt,
                 self.summarize_text_with_chunking,
             )
-            for chapter in self.chapters
+            for _, chapter in worthy_chapters
         )
 
-        with open(output_filename, "w") as file:
-            for index, summary in enumerate(results):
-                if summary.startswith("Error:"):
-                    print(f"Error summarizing chapter {index + 1}: {summary}")
-                else:
-                    file.write(f"## Chapter {index + 1}\n")
-                    file.write(summary)
-                    file.write("\n\n")
+        # Mapping summaries back to the chapter indices
+        summary_dict = {index: summary for (index, _), summary in zip(worthy_chapters, summarized_results)}
 
+        with open(output_filename, "w") as file:
+            for index, meta in enumerate(chapter_metadata):
+                file.write(f"## {meta['title']}\n")
+                summary = summary_dict.get(index, "Evaluated as not worth summarizing.")
+                file.write(summary)
+                file.write("\n\n")
         print(f"Book summary saved to {output_filename}")
 
     def log_recent_experiment(self, filename: str = "prompting_log.md") -> None:
