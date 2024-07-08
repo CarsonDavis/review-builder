@@ -13,12 +13,21 @@ client = OpenAI()
 
 
 def validate_model_name(func: Callable) -> Callable:
-    """Decorator to validate the model argument."""
+    """Decorator to validate any argument containing the word 'model'."""
 
     def wrapper(self, *args, **kwargs):
-        model = kwargs.get("model") or (args[1] if len(args) > 1 else None)
-        if model not in self.VALID_MODELS:
-            raise ValueError(f"Model {model} is not known. Choose from {list(self.VALID_MODELS.keys())}.")
+        # Extract all keyword arguments that contain 'model' in their name
+        model_kwargs = {k: v for k, v in kwargs.items() if "model" in k}
+        # Extract all positional arguments that contain 'model' in their name (assuming standard naming conventions)
+        model_args = [arg for name, arg in zip(func.__code__.co_varnames[1:], args) if "model" in name]
+
+        # Combine all found model arguments
+        all_models = list(model_kwargs.values()) + model_args
+
+        for model in all_models:
+            if model not in self.VALID_MODELS:
+                raise ValueError(f"Model {model} is not known. Choose from {list(self.VALID_MODELS.keys())}.")
+
         return func(self, *args, **kwargs)
 
     return wrapper
@@ -144,7 +153,7 @@ class BookSummarizer:
             f"{custom_instruction}\n{text}" if custom_instruction else f"{self.DEFAULT_INSTRUCTION_PROMPT}\n{text}"
         )
 
-        summary = self._call_gpt(model, system_prompt, instruction_with_text)
+        summary = self._call_gpt(model=model, system_prompt=system_prompt, instruction=instruction_with_text)
         self.recent_experiment = {
             "model": model,
             "system_prompt": system_prompt,
@@ -180,7 +189,7 @@ class BookSummarizer:
         summarizer_model = summarizer_model or self.DEFAULT_SUMMARIZER_MODEL
         chunks = self.chunk_text(
             text=text,
-            summarizer_model=summarizer_model,
+            model=summarizer_model,
         )
 
         appended_summaries = ""
