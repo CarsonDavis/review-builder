@@ -34,9 +34,20 @@ def validate_model_name(func: Callable) -> Callable:
 
 
 class BookSummarizer:
-    DEFAULT_SYSTEM_PROMPT = "You are a skilled textual analyst that can synthesize the key concepts in long text and identify crucial details to retain."
-    DEFAULT_INSTRUCTION_PROMPT = "Make a list of the key points made by the author in the following chapter. Under each point, list out the reasons or evidence given."
-    DEFAULT_COMBINER_PROMPT = "I will provide you with several summaries of different parts of a chapter. Combine these summaries into one single summary."
+    DEFAULT_SYSTEM_PROMPT = (
+        "You are a skilled textual analyst that can synthesize the key concepts in "
+        "long text and identify crucial details to retain."
+    )
+    DEFAULT_INSTRUCTION_PROMPT = (
+        "Make a list of the key points made by the author in the following chapter. "
+        "Under each point, list out the reasons or evidence given."
+    )
+    DEFAULT_COMBINER_PROMPT = (
+        "I will provide you with several summaries of different parts of a chapter. "
+        "Combine these summaries into one single summary. The final summary should "
+        "have a list of the key points made by the author in the following chapter. "
+        "Under each point, list out the reasons or evidence given."
+    )
     DEFAULT_SUMMARIZER_MODEL = "gpt-3.5-turbo"
     DEFAULT_COMBINER_MODEL = "gpt-4o"
 
@@ -202,12 +213,16 @@ class BookSummarizer:
             )
             appended_summaries += "\n"
 
-        combined_summary = self.summarize_text(
-            text=appended_summaries,
-            model=combiner_model or self.DEFAULT_COMBINER_MODEL,
-            custom_system_prompt=custom_summarizer_prompt or self.DEFAULT_SYSTEM_PROMPT,
-            custom_instruction=custom_combiner_prompt or self.DEFAULT_COMBINER_PROMPT,
-        )
+        if len(chunks) > 1:
+            combined_summary = self.summarize_text(
+                text=appended_summaries,
+                model=combiner_model or self.DEFAULT_COMBINER_MODEL,
+                custom_system_prompt=custom_summarizer_prompt or self.DEFAULT_SYSTEM_PROMPT,
+                custom_instruction=custom_combiner_prompt or self.DEFAULT_COMBINER_PROMPT,
+            )
+        else:
+            combined_summary = appended_summaries
+
         return combined_summary
 
     @validate_model_name
