@@ -34,11 +34,16 @@ pip install ebooklib beautifulsoup4 nltk openai python-dotenv tiktoken
 
 ### BookSummarizer
 
-The `BookSummarizer` class is the highest level and calls on many other classes. It uses the OpenAI API to summarize chapters from an EPUB file.
+The `BookSummarizer` uses the OpenAI API to summarize chapters from an EPUB file.
+
+It comes with some nice features:
+- parallel processing of chapters
+- dual-model, chunk-based summarization of large texts
+- fine-tuneable with custom prompts
 
 #### Setup
 
-Ensure you have your OpenAI API key stored in a `.env` file:
+Ensure you have your [OpenAI API key](https://platform.openai.com/api-keys) stored in a `.env` file:
 
 ```bash
 echo "OPENAI_API_KEY=your_api_key_here" > .env
