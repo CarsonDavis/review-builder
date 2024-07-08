@@ -47,7 +47,7 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 #### Usage
 
 ```python
-from llm_helper import BookSummarizer
+from book_summarizer import BookSummarizer
 
 # Initialize with the path to your EPUB file
 summarizer = BookSummarizer("path/to/your/book.epub")
@@ -61,6 +61,7 @@ summarizer.summarize_book("book_summary.md")
 ```
 
 If you are fine-tuning the summarization prompts, you can provide a custom system prompt and instruction and then log the results.
+
 ```python
 # Use a custom prompt for summarization
 custom_system_prompt = "You are an expert in economic history analyzing George Orwell's perspectives."
@@ -69,6 +70,7 @@ custom_instruction = (
 )
 custom_summary = summarizer.summarize_text(
     summarizer.chapters[1],
+    model="gpt-3.5-turbo",
     custom_system_prompt=custom_system_prompt,
     custom_instruction=custom_instruction,
 )
@@ -85,7 +87,7 @@ The `BookAnalyzer` class analyzes the text extracted from an EPUB file, providin
 #### Usage
 
 ```python
-from book_analyzer import BookAnalyzer
+from book_summarizer import BookAnalyzer
 
 # Initialize with the path to your EPUB file
 analyzer = BookAnalyzer("path/to/your/book.epub")
@@ -111,7 +113,7 @@ You can use the  `CostCalculator` class independently to calculate the cost of p
 #### Usage
 
 ```python
-from cost_calculator import CostCalculator
+from book_summarizer import CostCalculator
 
 # Initialize with the model name
 calculator = CostCalculator("gpt-3.5-turbo")
@@ -129,7 +131,7 @@ The `EpubExtractor` extracts and removes excess newlines from a EPUB files. It w
 #### Usage
 
 ```python
-from epub_extractor import EpubExtractor
+from book_summarizer import EpubExtractor
 
 # Initialize with the path to your EPUB file
 extractor = EpubExtractor("path/to/your/book.epub")
