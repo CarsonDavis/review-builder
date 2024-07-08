@@ -1,6 +1,7 @@
 import datetime
 import time
 from collections.abc import Callable
+from functools import wraps
 
 import tiktoken
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ client = OpenAI()
 def validate_model_name(func: Callable) -> Callable:
     """Decorator to validate any argument containing the word 'model'."""
 
+    @wraps(func)
     def wrapper(self, *args, **kwargs):
         # Extract all keyword arguments that contain 'model' in their name
         model_kwargs = {k: v for k, v in kwargs.items() if "model" in k}
@@ -261,7 +263,7 @@ class BookSummarizer:
 
         return combined_summary
 
-    # @validate_model_name
+    @validate_model_name
     def summarize_book(
         self,
         output_filename: str = "book_summary.md",
@@ -293,7 +295,7 @@ class BookSummarizer:
                 custom_combiner_prompt,
                 self.summarize_text_with_chunking,
             )
-            for chapter in self.chapters[:5]
+            for chapter in self.chapters
         )
 
         with open(output_filename, "w") as file:
