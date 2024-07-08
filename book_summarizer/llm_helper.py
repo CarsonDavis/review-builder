@@ -28,6 +28,8 @@ class BookSummarizer:
     DEFAULT_SYSTEM_PROMPT = "You are a skilled textual analyst that can synthesize the key concepts in long text and identify crucial details to retain."
     DEFAULT_INSTRUCTION_PROMPT = "Make a list of the key points made by the author in the following chapter. Under each point, list out the reasons or evidence given."
     DEFAULT_COMBINER_PROMPT = "I will provide you with several summaries of different parts of a chapter. Combine these summaries into one single summary."
+    DEFAULT_SUMMARIZER_MODEL = "gpt-3.5-turbo"
+    DEFAULT_COMBINER_MODEL = "gpt-4o"
 
     SUMMARY_SIZE = 1500  # gpt-3.5-turbo summaries for 12k chapters were 500 tokens. 1500 should be safe.
     VALID_MODELS = {
@@ -119,7 +121,7 @@ class BookSummarizer:
     def summarize_text(
         self,
         text: str,
-        model: str = "gpt-3.5-turbo",
+        model: str | None = None,
         custom_system_prompt: str | None = None,
         custom_instruction: str | None = None,
     ) -> str:
@@ -136,6 +138,7 @@ class BookSummarizer:
         Returns:
             str: The generated summary.
         """
+        model = model or self.DEFAULT_SUMMARIZER_MODEL
         system_prompt = custom_system_prompt or self.DEFAULT_SYSTEM_PROMPT
         instruction_with_text = (
             f"{custom_instruction}\n{text}" if custom_instruction else f"{self.DEFAULT_INSTRUCTION_PROMPT}\n{text}"
@@ -155,8 +158,10 @@ class BookSummarizer:
     def summarize_text_with_chunking(
         self,
         text: str,
-        summarizer_model: str = "gpt-3.5-turbo",
-        combiner_model: str = "gpt-4o",
+        summarizer_model: str | None = None,
+        custom_summarizer_prompt: str | None = None,
+        custom_summarizer_instruction: str | None = None,
+        combiner_model: str | None = None,
         custom_combiner_prompt: str | None = None,
     ) -> str:
         """
@@ -172,17 +177,27 @@ class BookSummarizer:
         Returns:
             str: The combined summary.
         """
-        chunks = self.chunk_text(text, summarizer_model)
+        summarizer_model = summarizer_model or self.DEFAULT_SUMMARIZER_MODEL
+        chunks = self.chunk_text(
+            text=text,
+            summarizer_model=summarizer_model,
+        )
 
         appended_summaries = ""
         for chunk in chunks:
-            appended_summaries += self.summarize_text(chunk, model=summarizer_model)
+            appended_summaries += self.summarize_text(
+                text=chunk,
+                model=summarizer_model,
+                custom_system_prompt=custom_summarizer_prompt,
+                custom_instruction=custom_summarizer_instruction,
+            )
             appended_summaries += "\n"
 
         combined_summary = self.summarize_text(
             text=appended_summaries,
+            model=combiner_model or self.DEFAULT_COMBINER_MODEL,
+            custom_system_prompt=custom_summarizer_prompt or self.DEFAULT_SYSTEM_PROMPT,
             custom_instruction=custom_combiner_prompt or self.DEFAULT_COMBINER_PROMPT,
-            model=combiner_model,
         )
         return combined_summary
 
@@ -190,22 +205,33 @@ class BookSummarizer:
     def summarize_book(
         self,
         output_filename: str = "book_summary.md",
-        model: str = "gpt-3.5-turbo",
-        system_prompt: str | None = None,
-        instruction: str | None = None,
+        summarizer_model: str = "gpt-3.5-turbo",
+        custom_summarizer_prompt: str | None = None,
+        custom_summarizer_instruction: str | None = None,
+        combiner_model: str = "gpt-4o",
+        custom_combiner_prompt: str | None = None,
     ) -> None:
         """
         Summarizes the entire book and saves the summary to a file.
 
         Args:
             output_filename (str): The filename to save the book summary.
-            model (str): The model name to use for summarization.
-            system_prompt (Optional[str]): The system prompt for the model.
-            instruction (Optional[str]): The user instruction for the model.
+            summarizer_model (str): The model name to use for summarization.
+            custom_summarizer_prompt (Optional[str]): Custom system prompt for the summarizer model.
+            custom_summarizer_instruction (Optional[str]): Custom user instruction for the summarizer model.
+            combiner_model (str): The model name to use for combining summaries.
+            custom_combiner_prompt (Optional[str]): Custom prompt for the combiner model.
         """
         with open(output_filename, "w") as file:
             for index, chapter in enumerate(self.chapters):
-                summary = self.summarize_text_with_chunking(chapter, model, system_prompt, instruction)
+                summary = self.summarize_text_with_chunking(
+                    text=chapter,
+                    summarizer_model=summarizer_model,
+                    custom_summarizer_prompt=custom_summarizer_prompt,
+                    custom_summarizer_instruction=custom_summarizer_instruction,
+                    combiner_model=combiner_model,
+                    custom_combiner_prompt=custom_combiner_prompt,
+                )
                 file.write(f"## Chapter {index + 1}\n")
                 file.write(summary)
                 file.write("\n\n")
@@ -250,7 +276,10 @@ if __name__ == "__main__":
         "Highlight the key economic arguments Orwell makes in this chapter. Provide examples and evidence he uses."
     )
     custom_summary = summarizer.summarize_text(
-        chapters[1], system_prompt=custom_system_prompt, custom_instruction=custom_instruction
+        chapters[1],
+        model="gpt-3.5-turbo",
+        custom_system_prompt=custom_system_prompt,
+        custom_instruction=custom_instruction,
     )
     print(custom_summary)
 
