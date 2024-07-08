@@ -101,7 +101,7 @@ You can also retrieve specific information from the analyzer object:
 ```python
 analyzer.word_counts()
 analyzer.token_counts()
-analyzer.word_frequency()
+analyzer.word_frequencies()
 analyzer.calculate_cost("gpt-3.5-turbo")
 ```
 
