@@ -1,9 +1,10 @@
-import ebooklib
-from ebooklib import epub
-from bs4 import BeautifulSoup
+import os
 import re
 import sys
-import os
+
+import ebooklib
+from bs4 import BeautifulSoup
+from ebooklib import epub
 
 
 class EpubExtractor:

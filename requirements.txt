@@ -1,0 +1,9 @@
+ebooklib
+beautifulsoup4
+nltk
+openai
+python-dotenv
+tiktoken
+pytest
+pytest-mock
+pre-commit

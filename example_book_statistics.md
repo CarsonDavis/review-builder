@@ -240,4 +240,3 @@ Total Word Count: 84,057
 | us | 48 |
 | want | 48 |
 | far | 48 |
-
