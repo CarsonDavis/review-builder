@@ -1,19 +1,18 @@
 # Book Statistics
-
-
+The Road to Wigan Pier, 215 pages
 ## Overview
 
 Total Word Count: 84,057
 
 | Model | Cost |
 |-------|------|
-| gpt-4o | $2.09 |
-| gpt-3.5-turbo | $0.21 |
+| gpt-4o | $0.46 |
+| gpt-3.5-turbo | $0.05 |
 
 ## Word and Token Counts per Chapter
 
-| Chapter | Words | gpt-4o Tokens | gpt-3.5-turbo Tokens |
-|---------|------------|------------- | -------------|
+| Chapter | Words |gpt-4o Tokens | gpt-3.5-turbo Tokens |
+|---------|-------|-------- | --------|
 | 1 | 17 | 30 | 30 |
 | 2 | 39 | 75 | 75 |
 | 3 | 654 | 761 | 764 |
