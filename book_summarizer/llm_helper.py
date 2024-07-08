@@ -1,8 +1,10 @@
 import datetime
+import time
 from collections.abc import Callable
 
 import tiktoken
 from dotenv import load_dotenv
+from joblib import Parallel, delayed
 from openai import OpenAI
 
 from .epub_extractor import EpubExtractor
@@ -31,6 +33,40 @@ def validate_model_name(func: Callable) -> Callable:
         return func(self, *args, **kwargs)
 
     return wrapper
+
+
+def summarize_chapter(
+    chapter,
+    summarizer_model,
+    custom_summarizer_prompt,
+    custom_summarizer_instruction,
+    combiner_model,
+    custom_combiner_prompt,
+    summarizer_func,
+    max_retries=5,
+):
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            summary = summarizer_func(
+                text=chapter,
+                summarizer_model=summarizer_model,
+                custom_summarizer_prompt=custom_summarizer_prompt,
+                custom_summarizer_instruction=custom_summarizer_instruction,
+                combiner_model=combiner_model,
+                custom_combiner_prompt=custom_combiner_prompt,
+            )
+            return summary
+        except Exception as e:
+            error_message = str(e)
+            if "rate limit" in error_message.lower():
+                retry_count += 1
+                wait_time = 2**retry_count  # Exponential backoff
+                print(f"Rate limit exceeded. Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                return f"Error: {e}"
+    return f"Error: Rate limit exceeded after {max_retries} retries."
 
 
 class BookSummarizer:
@@ -225,7 +261,7 @@ class BookSummarizer:
 
         return combined_summary
 
-    @validate_model_name
+    # @validate_model_name
     def summarize_book(
         self,
         output_filename: str = "book_summary.md",
@@ -246,19 +282,29 @@ class BookSummarizer:
             combiner_model (str): The model name to use for combining summaries.
             custom_combiner_prompt (Optional[str]): Custom prompt for the combiner model.
         """
+
+        results = Parallel(n_jobs=-1)(
+            delayed(summarize_chapter)(
+                chapter,
+                summarizer_model,
+                custom_summarizer_prompt,
+                custom_summarizer_instruction,
+                combiner_model,
+                custom_combiner_prompt,
+                self.summarize_text_with_chunking,
+            )
+            for chapter in self.chapters[:5]
+        )
+
         with open(output_filename, "w") as file:
-            for index, chapter in enumerate(self.chapters):
-                summary = self.summarize_text_with_chunking(
-                    text=chapter,
-                    summarizer_model=summarizer_model,
-                    custom_summarizer_prompt=custom_summarizer_prompt,
-                    custom_summarizer_instruction=custom_summarizer_instruction,
-                    combiner_model=combiner_model,
-                    custom_combiner_prompt=custom_combiner_prompt,
-                )
-                file.write(f"## Chapter {index + 1}\n")
-                file.write(summary)
-                file.write("\n\n")
+            for index, summary in enumerate(results):
+                if summary.startswith("Error:"):
+                    print(f"Error summarizing chapter {index + 1}: {summary}")
+                else:
+                    file.write(f"## Chapter {index + 1}\n")
+                    file.write(summary)
+                    file.write("\n\n")
+
         print(f"Book summary saved to {output_filename}")
 
     def log_recent_experiment(self, filename: str = "prompting_log.md") -> None:
