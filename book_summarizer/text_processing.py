@@ -1,6 +1,6 @@
 import tiktoken
 
-from llm_core import GPT4O, GPT35Turbo, LLMClient
+from book_summarizer.llm_core import GPT4O, GPT35Turbo, LLMClient
 
 
 class TextProcessor:

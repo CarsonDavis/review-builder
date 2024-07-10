@@ -1,7 +1,7 @@
 import pytest
 
+from book_summarizer.llm_core import GPT4O, GPT35Turbo
 from book_summarizer.text_processing import TextProcessor
-from llm_core import GPT4O, GPT35Turbo
 
 # Mock text and token data for testing
 mock_text = "This is a test text for tokenization and chunking."
