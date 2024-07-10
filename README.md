@@ -80,6 +80,28 @@ custom_summary = summarizer.summarize_text(
     custom_instruction=custom_instruction,
 )
 print(custom_summary)
+```
+
+#### Metadata Extraction and Worthiness
+"Chapters" in an ebook are really more like sections, and often include the Title page, Index, and other pieces which don't make sense to summarize. Additionally, GPT-3.5-turbo will often hallucinate summaries when given a Copyright page or other non-content text.
+
+Worthiness is evaluated during the summarization process, but you can also evaluate it independently:
+
+```python
+for index, chapter in enumerate(summarizer.chapters):
+    title=summarizer._deduce_chapter_title(
+        chapter_text=chapter,
+        characters=500,
+        model="gpt-4o",
+    )
+    worthiness=summarizer._deduce_worthiness(
+        chapter_text=chapter,
+        characters=500,
+        model="gpt-3.5-turbo",
+    )
+    print(f"{index}: {worthiness} - {title}")
+```
+
 
 # Log the most recent experiment
 summarizer.log_recent_experiment("custom_prompting_log.md")
