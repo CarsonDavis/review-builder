@@ -3,6 +3,6 @@
 from .book_analyzer import BookAnalyzer
 from .cost_calculator import CostCalculator
 from .epub_extractor import EpubExtractor
-from .llm_helper import BookSummarizer
+from .summarizer import BookSummarizer
 
 __all__ = ["BookAnalyzer", "CostCalculator", "EpubExtractor", "BookSummarizer"]

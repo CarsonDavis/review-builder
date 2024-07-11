@@ -7,6 +7,7 @@ from nltk.tokenize import word_tokenize
 
 from .cost_calculator import CostCalculator
 from .epub_extractor import EpubExtractor
+from .llm_core import GPT4O, GPT35Turbo, LLMClient
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download("punkt")
@@ -29,11 +30,12 @@ class BookAnalyzer:
 
     def token_counts(self) -> dict[str, tuple[int, list[int]]]:
         token_counts = {}
-        for model in CostCalculator.VALID_MODELS:
+        models = [GPT35Turbo(), GPT4O()]
+        for model in models:
             calculator = CostCalculator(model)
             total_token_count = sum(len(calculator.encoding.encode(chapter)) for chapter in self.chapters)
             chapter_token_counts = [len(calculator.encoding.encode(chapter)) for chapter in self.chapters]
-            token_counts[model] = (total_token_count, chapter_token_counts)
+            token_counts[model.model_name] = (total_token_count, chapter_token_counts)
         return token_counts
 
     def word_frequencies(self) -> dict[str, int]:
@@ -41,9 +43,9 @@ class BookAnalyzer:
         frequency = Counter(all_tokens)
         return dict(frequency.most_common())
 
-    def calculate_cost(self, model_name: str) -> float:
+    def calculate_cost(self, model_client: LLMClient) -> float:
         full_text = " ".join([" ".join(chapter) for chapter in self.tokenized_chapters])
-        calculator = CostCalculator(model_name)
+        calculator = CostCalculator(model_client)
         return calculator.calculate_cost(full_text)
 
     def write_statistics(self, save_path: str = None) -> None:
@@ -61,9 +63,9 @@ class BookAnalyzer:
 
             file.write("| Model | Cost |\n")
             file.write("|-------|------|\n")
-            for model in CostCalculator.VALID_MODELS:
+            for model in [GPT35Turbo(), GPT4O()]:
                 cost = self.calculate_cost(model)
-                file.write(f"| {model} | ${cost:.2f} |\n")
+                file.write(f"| {model.model_name} | ${cost:.2f} |\n")
             file.write("\n")
 
             file.write("## Word and Token Counts per Chapter\n\n")

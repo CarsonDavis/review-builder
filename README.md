@@ -68,18 +68,23 @@ summarizer.summarize_book("book_summary.md")
 If you are fine-tuning the summarization prompts, you can provide a custom system prompt and instruction and then log the results.
 
 ```python
+from book_summarizer import BookSummarizer
+from book_summarizer.llm_core import GPT4O
+
+summarizer = BookSummarizer("path/to/your/book.epub")
+
 # Use a custom prompt for summarization
 custom_system_prompt = "You are an expert in economic history analyzing George Orwell's perspectives."
 custom_instruction = (
     "Highlight the key economic arguments Orwell makes in this chapter. Provide examples and evidence he uses."
 )
-custom_summary = summarizer.summarize_text(
-    summarizer.chapters[1],
-    model="gpt-3.5-turbo",
-    custom_system_prompt=custom_system_prompt,
-    custom_instruction=custom_instruction,
+summary = summarizer.summarize_text(
+    text=summarizer.chapters[1],
+    model=GPT4O(), # you can override the default 3.5 by passing a different model
+    system_prompt=custom_system_prompt,
+    instruction=custom_instruction,
 )
-print(custom_summary)
+print(summary)
 ```
 
 #### Metadata Extraction and Worthiness
@@ -88,22 +93,28 @@ print(custom_summary)
 Worthiness is evaluated during the summarization process, but you can also evaluate it independently:
 
 ```python
+from book_summarizer import BookSummarizer
+from book_summarizer.llm_core import GPT4O, GPT35Turbo
+
+summarizer = BookSummarizer("path/to/your/book.epub")
+
 for index, chapter in enumerate(summarizer.chapters):
     title=summarizer._deduce_chapter_title(
         chapter_text=chapter,
         characters=500,
-        model="gpt-4o",
+        model=GPT4O(),
     )
     worthiness=summarizer._deduce_worthiness(
         chapter_text=chapter,
         characters=500,
-        model="gpt-3.5-turbo",
+        model=GPT35Turbo(),
     )
     print(f"{index}: {worthiness} - {title}")
 ```
 
 
 # Log the most recent experiment
+```python
 summarizer.log_recent_experiment("custom_prompting_log.md")
 ```
 
@@ -131,7 +142,7 @@ You can also retrieve specific information from the analyzer object:
 analyzer.word_counts()
 analyzer.token_counts()
 analyzer.word_frequencies()
-analyzer.calculate_cost("gpt-3.5-turbo")
+analyzer.calculate_cost(GPT35Turbo())
 ```
 
 
@@ -143,14 +154,14 @@ You can use the  `CostCalculator` class independently to calculate the cost of p
 
 ```python
 from book_summarizer import CostCalculator
+from book_summarizer.llm_core import GPT35Turbo
 
-# Initialize with the model name
-calculator = CostCalculator("gpt-3.5-turbo")
+calculator = CostCalculator(GPT35Turbo())
 
 # Calculate the cost of a sample text
 text = "Sample text to calculate cost."
 cost = calculator.calculate_cost(text)
-print(f"Cost to process text: ${cost:.2f}")
+print(f"Cost to process text: ${cost:.6f}")
 ```
 
 ### EpubExtractor

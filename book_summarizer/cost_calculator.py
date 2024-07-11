@@ -1,5 +1,7 @@
 import tiktoken
 
+from book_summarizer.llm_core import LLMClient
+
 
 class CostCalculator:
     """
@@ -7,46 +9,27 @@ class CostCalculator:
 
     Attributes
     ----------
-    VALID_MODELS : dict
-        A dictionary containing the cost per token for different models.
-    model_name : str
-        The name of the model to use for calculations.
+    model_client : LLMClient
+        An instance of an LLMClient subclass used for calculations.
     encoding : object
         The encoding object used to tokenize text for the specified model.
     num_tokens : int
         Number of tokens in the text. Will be 0 until the text is tokenized.
     """
 
-    VALID_MODELS = {
-        "gpt-4o": {"cost_per_token": 5 / 1000000},
-        "gpt-3.5-turbo": {"cost_per_token": 0.5 / 1000000},
-    }
-
-    def __init__(self, model_name: str):
+    def __init__(self, model_client: LLMClient):
         """
-        Validates the model name and uses tiktoken to get the encoding object for the specified model.
+        Initializes the CostCalculator with an LLMClient instance and uses tiktoken
+        to get the encoding object for the specified model.
 
         Parameters
         ----------
-        model_name : str
-            The name of the model to use for calculations.
+        model_client : LLMClient
+            An instance of an LLMClient subclass.
         """
-        self.model_name: str = model_name
-        self._validate_model_name()
-        self.encoding = tiktoken.encoding_for_model(model_name)
+        self.model_client: LLMClient = model_client
+        self.encoding = tiktoken.encoding_for_model(model_client.model_name)
         self.num_tokens: int = 0
-
-    def _validate_model_name(self) -> None:
-        """
-        Validates if the provided model name exists in the valid models dictionary.
-
-        Raises
-        ------
-        ValueError
-            If the model name does not exist in the valid models dictionary.
-        """
-        if self.model_name not in self.VALID_MODELS:
-            raise ValueError(f"No cost data for {self.model_name}")
 
     def _get_cost_per_token(self) -> float:
         """
@@ -57,7 +40,7 @@ class CostCalculator:
         float
             The cost per token.
         """
-        return self.VALID_MODELS[self.model_name]["cost_per_token"]
+        return self.model_client.cost_per_token
 
     def count_tokens(self, text: str) -> int:
         """
@@ -97,5 +80,6 @@ class CostCalculator:
 
 
 # Example usage:
-# calculator = CostCalculator("gpt-3.5-turbo")
+# gpt_35_turbo_client = GPT35Turbo()
+# calculator = CostCalculator(gpt_35_turbo_client)
 # print(calculator.calculate_cost("Some sample text to encode."))

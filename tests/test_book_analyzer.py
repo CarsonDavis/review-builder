@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from book_summarizer.book_analyzer import BookAnalyzer
+from book_summarizer.llm_core import GPT35Turbo
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ def mock_cost_calculator(mocker: Any) -> MagicMock:
 
 
 @pytest.fixture
-def analyzer(sample_epub_path: Path, mock_extractor: MagicMock, mock_cost_calculator: MagicMock) -> BookAnalyzer:
+def analyzer(sample_epub_path: Path, mock_extractor: MagicMock) -> BookAnalyzer:
     with patch("book_summarizer.epub_extractor.EpubExtractor._validate_file_path"):
         return BookAnalyzer(sample_epub_path)
 
@@ -43,7 +44,7 @@ def test_word_counts(analyzer: BookAnalyzer) -> None:
     assert chapter_word_counts == [8, 8]
 
 
-def test_token_counts(analyzer: BookAnalyzer) -> None:
+def test_token_counts(analyzer: BookAnalyzer, mock_cost_calculator: MagicMock) -> None:
     """
     Test that the token counts are correctly calculated for different models.
     """
@@ -76,9 +77,10 @@ def test_word_frequencies(analyzer: BookAnalyzer) -> None:
 
 def test_calculate_cost(analyzer: BookAnalyzer) -> None:
     """
-    Test that the cost calculation is correct for gpt-3.5.
+    Test that the cost calculation is correct for GPT-3.5 Turbo.
     """
-    cost = analyzer.calculate_cost("gpt-3.5-turbo")
+    model_client = GPT35Turbo()
+    cost = analyzer.calculate_cost(model_client)
     assert cost == 9e-06
 
 
