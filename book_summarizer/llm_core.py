@@ -1,4 +1,7 @@
+import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
+from typing import Any
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -29,18 +32,41 @@ class LLMClient(ABC):
         pass
 
 
+def retry_handler(func: Callable, *args, max_retries: int = 5, **kwargs) -> Any:
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            error_message = str(e)
+            if "rate limit" in error_message.lower():
+                retry_count += 1
+                wait_time = 3**retry_count  # Exponential backoff
+                print(f"Rate limit exceeded. Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                return f"Error: {e}"
+    return f"Error: Rate limit exceeded after {max_retries} retries."
+
+
 class GPTClient(LLMClient):
     client = CLIENT
 
-    def call(self, system_prompt: str, instruction: str) -> str:
-        completion = self.client.chat.completions.create(
+    def call(self, system_prompt: str, instruction: str, max_retries: int = 5) -> str:
+        return retry_handler(self._make_request, system_prompt, instruction, max_retries=max_retries)
+
+    def _make_request(self, system_prompt: str, instruction: str):
+        response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": instruction},
             ],
         )
-        return completion.choices[0].message.content
+        return self._parse_response(response)
+
+    def _parse_response(self, response):
+        return response.choices[0].message.content
 
 
 class GPT35Turbo(GPTClient):
