@@ -25,27 +25,8 @@ def summarizer(sample_epub_path: Path, mock_extractor: MagicMock) -> BookSummari
         return BookSummarizer(sample_epub_path)
 
 
-def test_tokenize_text(summarizer: BookSummarizer) -> None:
-    tokens = summarizer._tokenize_text("This is a test.", "gpt-3.5-turbo")
-    assert len(tokens) > 0  # Check that some tokens are returned
-
-
-def test_chunk_tokens(summarizer: BookSummarizer) -> None:
-    tokens = list(range(100))
-    chunks = summarizer._chunk_tokens(tokens, 50, 2)
-    assert len(chunks) == 3
-    assert chunks[0] == list(range(50))
-    assert chunks[1] == list(range(48, 98))
-
-
-def test_chunk_text(summarizer: BookSummarizer) -> None:
-    text = "This is a test. " * BookSummarizer.VALID_MODELS["gpt-3.5-turbo"]["max_tokens"]
-    chunks = summarizer.chunk_text(text, "gpt-3.5-turbo")
-    assert len(chunks) > 1
-
-
 def test_summarize_text(summarizer: BookSummarizer) -> None:
-    summary = summarizer.summarize_text(text="This is a test.", model="gpt-3.5-turbo")
+    summary = summarizer.summarize_text(text="This is a test.")
     assert len(summary) > 0  # Check that the summary is not empty
 
 
