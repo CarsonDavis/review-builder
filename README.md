@@ -1,5 +1,4 @@
 ## Project Overview
-### Problem Statement
 I listen to a lot of nonfiction. At the end of a book, I like to consolidate all my thoughts alongside the author's arguments and quotes.
 
 It's very hard to come back to a 700 page book after reading it and remember all the author's points and what I thought about them.
