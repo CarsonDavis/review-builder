@@ -30,25 +30,6 @@ def conditional_wandb_log(func):
     return wrapper
 
 
-def summarize_chapter(
-    chapter: str,
-    summarizer_model: LLMClient,
-    summarizer_prompt: str,
-    summarizer_instruction: str,
-    combiner_model: LLMClient,
-    combiner_prompt: str,
-    summarizer_func,
-) -> str:
-    return summarizer_func(
-        text=chapter,
-        summarizer_model=summarizer_model,
-        summarizer_prompt=summarizer_prompt,
-        summarizer_instruction=summarizer_instruction,
-        combiner_model=combiner_model,
-        combiner_prompt=combiner_prompt,
-    )
-
-
 class BookSummarizer:
     SUMMARY_SIZE = 1500  # gpt-3.5-turbo summaries for 12k chapters were 500 tokens. 1500 should be safe.
     CHUNK_OVERLAP = 50
@@ -214,14 +195,13 @@ class BookSummarizer:
 
         # Parallelize the summarization process
         summarized_results = Parallel(n_jobs=-1)(
-            delayed(summarize_chapter)(
+            delayed(self.summarize_text_with_chunking)(
                 chapter,
                 summarizer_model,
                 summarizer_prompt,
                 summarizer_instruction,
                 combiner_model,
                 combiner_prompt,
-                self.summarize_text_with_chunking,
             )
             for _, chapter in worthy_chapters
         )
