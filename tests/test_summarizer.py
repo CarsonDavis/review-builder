@@ -44,6 +44,7 @@ def test_summarize_book(summarizer: BookSummarizer, tmp_path: Path) -> None:
         content = f.read()
     assert "## Chapter 1" in content
     assert len(content) > 0  # Check that the content is not empty
+    assert "error" not in content.lower(), "Error string found in summary"
 
 
 def test_log_recent_experiment(summarizer: BookSummarizer, tmp_path: Path) -> None:
