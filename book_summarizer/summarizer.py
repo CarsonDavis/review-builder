@@ -49,14 +49,7 @@ def summarize_chapter(
 
 
 class BookSummarizer:
-    DEFAULT_SUMMARIZER_MODEL = GPT35Turbo()
-    DEFAULT_COMBINER_MODEL = GPT4O()
-
     SUMMARY_SIZE = 1500  # gpt-3.5-turbo summaries for 12k chapters were 500 tokens. 1500 should be safe.
-    VALID_MODELS = {
-        "gpt-3.5-turbo": {"max_tokens": 16385 - SUMMARY_SIZE},
-        "gpt-4o": {"max_tokens": 128000 - SUMMARY_SIZE},
-    }
     CHUNK_OVERLAP = 50
 
     def __init__(self, epub_path: str):
@@ -73,7 +66,7 @@ class BookSummarizer:
         self,
         chapter_text: str,
         characters: int,
-        model: LLMClient = DEFAULT_SUMMARIZER_MODEL,
+        model: LLMClient = GPT35Turbo(),
         system_prompt: str = DEFAULT_PROMPTS["worthiness_prompt"],
         instruction: str = DEFAULT_PROMPTS["worthiness_instruction"],
     ) -> str:
@@ -85,7 +78,7 @@ class BookSummarizer:
         self,
         chapter_text: str,
         characters: int,
-        model: LLMClient = DEFAULT_COMBINER_MODEL,
+        model: LLMClient = GPT4O(),
         system_prompt: str = DEFAULT_PROMPTS["chapter_prompt"],
         instruction: str = DEFAULT_PROMPTS["chapter_instruction"],
     ) -> str:
@@ -106,7 +99,7 @@ class BookSummarizer:
     def summarize_text(
         self,
         text: str,
-        model: LLMClient = DEFAULT_SUMMARIZER_MODEL,
+        model: LLMClient = GPT35Turbo(),
         system_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
         instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
     ) -> str:
@@ -137,10 +130,10 @@ class BookSummarizer:
     def summarize_text_with_chunking(
         self,
         text: str,
-        summarizer_model: LLMClient = DEFAULT_SUMMARIZER_MODEL,
+        summarizer_model: LLMClient = GPT35Turbo(),
         summarizer_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
         summarizer_instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
-        combiner_model: LLMClient = DEFAULT_COMBINER_MODEL,
+        combiner_model: LLMClient = GPT4O(),
         combiner_prompt: str = DEFAULT_PROMPTS["combiner_prompt"],
     ) -> str:
         """
