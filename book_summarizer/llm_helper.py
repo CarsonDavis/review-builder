@@ -2,29 +2,27 @@ import datetime
 import os
 import time
 
-import tiktoken
 from dotenv import load_dotenv
 from joblib import Parallel, delayed
-from openai import OpenAI
 
-from .epub_extractor import EpubExtractor
-from .helper_functions import find_boolean_in_string, validate_model_name
+from book_summarizer.epub_extractor import EpubExtractor
+from book_summarizer.llm_core import GPT4O, GPT35Turbo, LLMClient
+from book_summarizer.text_processing import TextProcessor, find_boolean_in_string
 
 # Load the API key which OpenAI will read from the environment
 load_dotenv()
-client = OpenAI()
 
 
 def summarize_chapter(
-    chapter,
-    summarizer_model,
-    custom_summarizer_prompt,
-    custom_summarizer_instruction,
-    combiner_model,
-    custom_combiner_prompt,
+    chapter: str,
+    summarizer_model: LLMClient,
+    custom_summarizer_prompt: str,
+    custom_summarizer_instruction: str,
+    combiner_model: LLMClient,
+    custom_combiner_prompt: str,
     summarizer_func,
-    max_retries=5,
-):
+    max_retries: int = 5,
+) -> str:
     retry_count = 0
     while retry_count < max_retries:
         try:
@@ -83,8 +81,8 @@ class BookSummarizer:
         "Respond True if the section is a chapter, preface, or other section worth summarizing. "
         "Respond False if the section is a title page, table of contents, or otherwise not worth summarizing."
     )
-    DEFAULT_SUMMARIZER_MODEL = "gpt-3.5-turbo"
-    DEFAULT_COMBINER_MODEL = "gpt-4o"
+    DEFAULT_SUMMARIZER_MODEL = GPT35Turbo()
+    DEFAULT_COMBINER_MODEL = GPT4O()
 
     SUMMARY_SIZE = 1500  # gpt-3.5-turbo summaries for 12k chapters were 500 tokens. 1500 should be safe.
     VALID_MODELS = {
@@ -98,50 +96,16 @@ class BookSummarizer:
         self.extractor = EpubExtractor(epub_path)
         self.chapters = self.extractor.chapters
         self.recent_experiment = None
+        self.text_processor = TextProcessor()
 
     def _default_save_path(self) -> str:
         return os.path.splitext(self.epub_path)[0] + "_summary.md"
 
-    @validate_model_name
-    def _tokenize_text(self, text: str, model: str) -> list[int]:
-        """
-        Tokenizes the input text using the specified model's encoding.
-
-        Args:
-            text (str): The text to be tokenized.
-            model (str): The model name to determine the encoding.
-
-        Returns:
-            list[int]: A list of token ids.
-        """
-        encoding = tiktoken.encoding_for_model(model)
-        return encoding.encode(text)
-
-    def _chunk_tokens(self, tokens: list[int], chunk_size: int, overlap: int) -> list[list[int]]:
-        """
-        Splits a list of tokens into smaller chunks with a specified overlap.
-
-        Args:
-            tokens (list[int]): The list of token ids to be chunked.
-            chunk_size (int): The maximum number of tokens per chunk.
-            overlap (int): The number of overlapping tokens between consecutive chunks.
-
-        Returns:
-            list[list[int]]: A list of token chunks.
-        """
-        chunks = []
-        for i in range(0, len(tokens), chunk_size - overlap):
-            chunks.append(tokens[i : i + chunk_size])
-            if i + chunk_size >= len(tokens):
-                break
-        return chunks
-
-    @validate_model_name
     def _deduce_worthiness(
         self,
         chapter_text: str,
         characters: int,
-        model: str = "gpt-3.5-turbo",
+        model: LLMClient = DEFAULT_SUMMARIZER_MODEL,
         system_prompt: str | None = None,
         instruction: str | None = None,
     ) -> str:
@@ -150,17 +114,15 @@ class BookSummarizer:
         instruction = instruction or self.DEFAULT_WORTHINESS_INSTRUCTION
 
         instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
-
-        worthiness_boolean = self._call_gpt(model=model, system_prompt=system_prompt, instruction=instruction_with_text)
+        worthiness_boolean = model.call(system_prompt, instruction_with_text)
 
         return find_boolean_in_string(worthiness_boolean)
 
-    @validate_model_name
     def _deduce_chapter_title(
         self,
         chapter_text: str,
         characters: int,
-        model: str = "gpt-4o",
+        model: LLMClient = DEFAULT_COMBINER_MODEL,
         system_prompt: str | None = None,
         instruction: str | None = None,
     ) -> str:
@@ -178,56 +140,14 @@ class BookSummarizer:
         instruction = instruction or self.DEFAULT_CHAPTER_INSTRUCTION
 
         instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
-
-        chapter_title = self._call_gpt(model=model, system_prompt=system_prompt, instruction=instruction_with_text)
+        chapter_title = model.call(system_prompt, instruction_with_text)
 
         return chapter_title
 
-    @validate_model_name
-    def chunk_text(self, text: str, model: str) -> list[str]:
-        """
-        Chunks the input text into smaller pieces based on token limits, including overlap.
-
-        Args:
-            text (str): The text to be chunked.
-            model (str): The model name to determine the encoding.
-
-        Returns:
-            list[str]: A list of text chunks.
-        """
-        max_tokens = self.VALID_MODELS[model]["max_tokens"]
-        tokens = self._tokenize_text(text, model)
-        tokenized_chunks = self._chunk_tokens(tokens, max_tokens, self.CHUNK_OVERLAP)
-        encoding = tiktoken.encoding_for_model(model)
-        return [encoding.decode(chunk) for chunk in tokenized_chunks]
-
-    @validate_model_name
-    def _call_gpt(self, model: str, system_prompt: str, instruction: str) -> str:
-        """
-        Calls the GPT model with specified prompts and returns the completion.
-
-        Args:
-            model (str): The model name to use for generating completion.
-            system_prompt (str): The system prompt for the model.
-            instruction (str): The user instruction for the model.
-
-        Returns:
-            str: The generated completion text.
-        """
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": instruction},
-            ],
-        )
-        return completion.choices[0].message.content
-
-    @validate_model_name
     def summarize_text(
         self,
         text: str,
-        model: str | None = None,
+        model: LLMClient | None = None,
         custom_system_prompt: str | None = None,
         custom_instruction: str | None = None,
     ) -> str:
@@ -236,7 +156,7 @@ class BookSummarizer:
 
         Args:
             text (str): The text to be summarized.
-            model (str): The model name to use for summarization.
+            model (Optional[LLMClient]): The model to use for summarization.
             custom_system_prompt (Optional[str]): Custom system prompt for the model. If None, uses the default prompt.
             custom_instruction (Optional[str]): Custom user instruction for the model. If None, uses the default prompt.
                 The text will be automatically appended to the instruction.
@@ -250,9 +170,9 @@ class BookSummarizer:
             f"{custom_instruction}\n{text}" if custom_instruction else f"{self.DEFAULT_SUMMARIZER_INSTRUCTION}\n{text}"
         )
 
-        summary = self._call_gpt(model=model, system_prompt=system_prompt, instruction=instruction_with_text)
+        summary = model.call(system_prompt, instruction_with_text)
         self.recent_experiment = {
-            "model": model,
+            "model": model.model_name,
             "system_prompt": system_prompt,
             "instruction": custom_instruction or self.DEFAULT_SUMMARIZER_INSTRUCTION,
             "summary": summary,
@@ -260,14 +180,13 @@ class BookSummarizer:
         }
         return summary
 
-    @validate_model_name
     def summarize_text_with_chunking(
         self,
         text: str,
-        summarizer_model: str | None = None,
+        summarizer_model: LLMClient | None = None,
         custom_summarizer_prompt: str | None = None,
         custom_summarizer_instruction: str | None = None,
-        combiner_model: str | None = None,
+        combiner_model: LLMClient | None = None,
         custom_combiner_prompt: str | None = None,
     ) -> str:
         """
@@ -276,17 +195,20 @@ class BookSummarizer:
 
         Args:
             text (str): The text to be summarized.
-            summarizer_model (str): The model name to use for summarizing chunks.
-            combiner_model (str): The model name to use for combining summaries.
+            summarizer_model (Optional[LLMClient]): The model to use for summarizing chunks.
+            combiner_model (Optional[LLMClient]): The model to use for combining summaries.
             custom_combiner_prompt (Optional[str]): Custom prompt for combining summaries. If None, uses the default prompt.
 
         Returns:
             str: The combined summary.
         """
         summarizer_model = summarizer_model or self.DEFAULT_SUMMARIZER_MODEL
-        chunks = self.chunk_text(
+        chunk_size = summarizer_model.max_tokens - self.SUMMARY_SIZE
+
+        chunks = TextProcessor(summarizer_model).chunk_text(
             text=text,
-            model=summarizer_model,
+            chunk_size=chunk_size,
+            overlap=self.CHUNK_OVERLAP,
         )
 
         appended_summaries = ""
@@ -311,30 +233,29 @@ class BookSummarizer:
 
         return combined_summary
 
-    def gpt_chapter_metadata(self, chapter, deduction_limit):
+    def gpt_chapter_metadata(self, chapter: str, deduction_limit: int) -> dict:
         title = self._deduce_chapter_title(chapter, deduction_limit)
         worthiness = self._deduce_worthiness(chapter, deduction_limit)
         return {"title": title, "worthiness": worthiness, "chapter": chapter}
 
-    @validate_model_name
     def summarize_book(
         self,
         output_filename: str | None = None,
-        summarizer_model: str = "gpt-3.5-turbo",
+        summarizer_model: LLMClient = GPT35Turbo(),
         custom_summarizer_prompt: str | None = None,
         custom_summarizer_instruction: str | None = None,
-        combiner_model: str = "gpt-4o",
+        combiner_model: LLMClient = GPT4O(),
         custom_combiner_prompt: str | None = None,
     ) -> None:
         """
         Summarizes the entire book and saves the summary to a file.
 
         Args:
-            output_filename (str): The filename to save the book summary.
-            summarizer_model (str): The model name to use for summarization.
+            output_filename (Optional[str]): The filename to save the book summary.
+            summarizer_model (LLMClient): The model to use for summarization.
             custom_summarizer_prompt (Optional[str]): Custom system prompt for the summarizer model.
             custom_summarizer_instruction (Optional[str]): Custom user instruction for the summarizer model.
-            combiner_model (str): The model name to use for combining summaries.
+            combiner_model (LLMClient): The model to use for combining summaries.
             custom_combiner_prompt (Optional[str]): Custom prompt for the combiner model.
         """
 
@@ -412,7 +333,7 @@ if __name__ == "__main__":
     )
     custom_summary = summarizer.summarize_text(
         chapters[1],
-        model="gpt-3.5-turbo",
+        model=GPT4O(),
         custom_system_prompt=custom_system_prompt,
         custom_instruction=custom_instruction,
     )
