@@ -1,6 +1,31 @@
+import re
+
 import tiktoken
 
 from book_summarizer.llm_core import GPT4O, GPT35Turbo, LLMClient
+
+
+def find_boolean_in_string(text: str) -> bool:
+    """
+    Searches for the words 'true' or 'false' in any capitalization within a string.
+    Returns the associated boolean value. If no match is found, returns True.
+
+    Args:
+        text (str): The input string to search within.
+
+    Returns:
+        bool: The boolean value associated with the found word, or True if no match is found.
+    """
+    # Compile regex patterns to match 'true' or 'false' in any capitalization
+    true_pattern = re.compile(r"\btrue\b", re.IGNORECASE)
+    false_pattern = re.compile(r"\bfalse\b", re.IGNORECASE)
+
+    if true_pattern.search(text):
+        return True
+    elif false_pattern.search(text):
+        return False
+
+    return True
 
 
 class TextProcessor:
