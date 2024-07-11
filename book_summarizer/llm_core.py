@@ -41,7 +41,7 @@ def retry_handler(func: Callable, *args, max_retries: int = 5, **kwargs) -> Any:
             error_message = str(e)
             if "rate limit" in error_message.lower():
                 retry_count += 1
-                wait_time = 2**retry_count  # Exponential backoff
+                wait_time = 3**retry_count  # Exponential backoff
                 print(f"Rate limit exceeded. Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
             else:
