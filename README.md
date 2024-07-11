@@ -43,13 +43,19 @@ It comes with some nice features:
 
 #### Setup
 
-Ensure you have your [OpenAI API key](https://platform.openai.com/api-keys) stored in a `.env` file:
+You will need a .env file in the root directory of the project which will hold the required OpenAI API key, and optionally a WandB API key for logging.
 
+You can alternately add these directly to your environment variables.
 ```bash
-echo "OPENAI_API_KEY=your_api_key_here" > .env
+OPENAI_API_KEY=your_api_key_here
+WANDB_API_KEY=your_api_key_here
 ```
 
-#### Usage
+
+
+
+#### Basic Usage
+This will summarize the entire book and save the results to a markdown file.
 
 ```python
 from book_summarizer import BookSummarizer
@@ -65,7 +71,11 @@ print(chapter_summary)
 summarizer.summarize_book("book_summary.md")
 ```
 
-If you are fine-tuning the summarization prompts, you can provide a custom system prompt and instruction and then log the results.
+
+#### Prompt Engineering
+I've found that some books do better with custom prompts, and I will often iterate on a single chapter before running the whole book.
+
+If you are fine-tuning the summarization prompts, you can provide a custom system prompt and instruction.
 
 ```python
 from book_summarizer import BookSummarizer
@@ -81,6 +91,25 @@ custom_instruction = (
 summary = summarizer.summarize_text(
     text=summarizer.chapters[1],
     model=GPT4O(), # you can override the default 3.5 by passing a different model
+    system_prompt=custom_system_prompt,
+    instruction=custom_instruction,
+)
+print(summary)
+```
+
+#### Logging with WandB
+The project supports the new [Weave](https://wandb.ai/site/weave) functionality of WandB. Simply pass your project name and calls to summarize_text will be logged as traces.
+
+If you have never used WandB before, it's pretty amazing and you should check it out.
+
+```python
+from book_summarizer import BookSummarizer
+
+summarizer = BookSummarizer("path/to/your/book.epub")
+summarizer.log_future_calls_to_wandb('project_name')
+
+summary = summarizer.summarize_text(
+    text=summarizer.chapters[1],
     system_prompt=custom_system_prompt,
     instruction=custom_instruction,
 )
@@ -112,11 +141,6 @@ for index, chapter in enumerate(summarizer.chapters):
     print(f"{index}: {worthiness} - {title}")
 ```
 
-
-# Log the most recent experiment
-```python
-summarizer.log_recent_experiment("custom_prompting_log.md")
-```
 
 ### BookAnalyzer
 
