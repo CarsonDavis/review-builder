@@ -15,12 +15,12 @@ The idea is to use the summaries as an aide to engaging with the author's key po
 The cost of the entire experience -- summarizing, finding quotes, ideally even some back and forth with the llm -- should cost less than $2 per book.
 
 ### Pricing
-For reference, here is the GPT pricing structure.
+For reference, here is the GPT pricing structure. I have also provided cost breakdowns for summarization of both a [short](example_book_statistics_short.md) and [long](example_book_statistics_long.md) book.
 
 <img width="981" alt="image" src="https://github.com/CarsonDavis/review-builder/assets/14339518/d495f99d-c815-43cf-94c9-a0f1a284ea8f">
 
 ## Quick Start Tutorial
-So far, I've built out the summarization portion of the project. It makes good summaries, especially with 4o, but I think it still needs some prompt engineering to before it can perfectly satisfy my requirements.
+So far, I've built out the summarization portion of the project. It makes good summaries, especially with 4o, but I think it could benefit from some additional promt engineering.
 
 This repository contains a few useful classes, including EpubExtractor, CostCalculator, BookAnalyzer, and BookSummarizer. These classes are designed to help you extract text from EPUB files, calculate costs for processing text, analyze book statistics, and summarize chapters.
 
