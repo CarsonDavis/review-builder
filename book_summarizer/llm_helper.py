@@ -65,7 +65,6 @@ class BookSummarizer:
         self.chapters = self.extractor.chapters
         self.recent_experiment = None
         self.text_processor = TextProcessor()
-        self.default_prompts = DEFAULT_PROMPTS
 
     def _default_save_path(self) -> str:
         return os.path.splitext(self.epub_path)[0] + "_summary.md"
@@ -75,15 +74,11 @@ class BookSummarizer:
         chapter_text: str,
         characters: int,
         model: LLMClient = DEFAULT_SUMMARIZER_MODEL,
-        system_prompt: str | None = None,
-        instruction: str | None = None,
+        system_prompt: str = DEFAULT_PROMPTS["worthiness_prompt"],
+        instruction: str = DEFAULT_PROMPTS["worthiness_instruction"],
     ) -> str:
-        system_prompt = system_prompt or self.default_prompts["worthiness_prompt"]
-        instruction = instruction or self.default_prompts["worthiness_instruction"]
-
         instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
         worthiness_boolean = model.call(system_prompt, instruction_with_text)
-
         return find_boolean_in_string(worthiness_boolean)
 
     def _deduce_chapter_title(
@@ -91,8 +86,8 @@ class BookSummarizer:
         chapter_text: str,
         characters: int,
         model: LLMClient = DEFAULT_COMBINER_MODEL,
-        system_prompt: str | None = None,
-        instruction: str | None = None,
+        system_prompt: str = DEFAULT_PROMPTS["chapter_prompt"],
+        instruction: str = DEFAULT_PROMPTS["chapter_instruction"],
     ) -> str:
         """
         Deduces the chapter title from the beginning of the chapter text.
@@ -104,20 +99,16 @@ class BookSummarizer:
         Returns:
             str: The deduced chapter title.
         """
-        system_prompt = system_prompt or self.default_prompts["chapter_prompt"]
-        instruction = instruction or self.default_prompts["chapter_instruction"]
-
         instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
         chapter_title = model.call(system_prompt, instruction_with_text)
-
         return chapter_title
 
     def summarize_text(
         self,
         text: str,
-        model: LLMClient | None = None,
-        custom_system_prompt: str | None = None,
-        custom_instruction: str | None = None,
+        model: LLMClient = DEFAULT_SUMMARIZER_MODEL,
+        system_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
+        instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
     ) -> str:
         """
         Summarizes the given text using the specified model. Does not handle chunking.
@@ -125,26 +116,19 @@ class BookSummarizer:
         Args:
             text (str): The text to be summarized.
             model (Optional[LLMClient]): The model to use for summarization.
-            custom_system_prompt (Optional[str]): Custom system prompt for the model. If None, uses the default prompt.
-            custom_instruction (Optional[str]): Custom user instruction for the model. If None, uses the default prompt.
+            system_prompt (Optional[str]): Custom system prompt for the model. If None, uses the default prompt.
+            instruction (Optional[str]): Custom user instruction for the model. If None, uses the default prompt.
                 The text will be automatically appended to the instruction.
 
         Returns:
             str: The generated summary.
         """
-        model = model or self.DEFAULT_SUMMARIZER_MODEL
-        system_prompt = custom_system_prompt or self.default_prompts["summarizer_prompt"]
-        instruction_with_text = (
-            f"{custom_instruction}\n{text}"
-            if custom_instruction
-            else f"{self.default_prompts['summarizer_instruction']}\n{text}"
-        )
-
+        instruction_with_text = f"{instruction}\n{text}"
         summary = model.call(system_prompt, instruction_with_text)
         self.recent_experiment = {
             "model": model.model_name,
             "system_prompt": system_prompt,
-            "instruction": custom_instruction or self.default_prompts["summarizer_instruction"],
+            "instruction": instruction,
             "summary": summary,
             "text": text,
         }
@@ -153,11 +137,11 @@ class BookSummarizer:
     def summarize_text_with_chunking(
         self,
         text: str,
-        summarizer_model: LLMClient | None = None,
-        custom_summarizer_prompt: str | None = None,
-        custom_summarizer_instruction: str | None = None,
-        combiner_model: LLMClient | None = None,
-        custom_combiner_prompt: str | None = None,
+        summarizer_model: LLMClient = DEFAULT_SUMMARIZER_MODEL,
+        summarizer_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
+        summarizer_instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
+        combiner_model: LLMClient = DEFAULT_COMBINER_MODEL,
+        combiner_prompt: str = DEFAULT_PROMPTS["combiner_prompt"],
     ) -> str:
         """
         Summarizes the given text by chunking it and then combining the chunk summaries.
@@ -167,12 +151,11 @@ class BookSummarizer:
             text (str): The text to be summarized.
             summarizer_model (Optional[LLMClient]): The model to use for summarizing chunks.
             combiner_model (Optional[LLMClient]): The model to use for combining summaries.
-            custom_combiner_prompt (Optional[str]): Custom prompt for combining summaries. If None, uses the default prompt.
+            combiner_prompt (Optional[str]): Custom prompt for combining summaries. If None, uses the default prompt.
 
         Returns:
             str: The combined summary.
         """
-        summarizer_model = summarizer_model or self.DEFAULT_SUMMARIZER_MODEL
         chunk_size = summarizer_model.max_tokens - self.SUMMARY_SIZE
 
         chunks = TextProcessor(summarizer_model).chunk_text(
@@ -186,17 +169,17 @@ class BookSummarizer:
             appended_summaries += self.summarize_text(
                 text=chunk,
                 model=summarizer_model,
-                custom_system_prompt=custom_summarizer_prompt,
-                custom_instruction=custom_summarizer_instruction,
+                system_prompt=summarizer_prompt,
+                instruction=summarizer_instruction,
             )
             appended_summaries += "\n"
 
         if len(chunks) > 1:
             combined_summary = self.summarize_text(
                 text=appended_summaries,
-                model=combiner_model or self.DEFAULT_COMBINER_MODEL,
-                custom_system_prompt=custom_summarizer_prompt or self.default_prompts["summarizer_prompt"],
-                custom_instruction=custom_combiner_prompt or self.default_prompts["combiner_prompt"],
+                model=combiner_model,
+                system_prompt=summarizer_prompt,
+                instruction=combiner_prompt,
             )
         else:
             combined_summary = appended_summaries
@@ -212,10 +195,10 @@ class BookSummarizer:
         self,
         output_filename: str | None = None,
         summarizer_model: LLMClient = GPT35Turbo(),
-        custom_summarizer_prompt: str | None = None,
-        custom_summarizer_instruction: str | None = None,
+        summarizer_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
+        summarizer_instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
         combiner_model: LLMClient = GPT4O(),
-        custom_combiner_prompt: str | None = None,
+        combiner_prompt: str = DEFAULT_PROMPTS["combiner_prompt"],
     ) -> None:
         """
         Summarizes the entire book and saves the summary to a file.
@@ -223,12 +206,11 @@ class BookSummarizer:
         Args:
             output_filename (Optional[str]): The filename to save the book summary.
             summarizer_model (LLMClient): The model to use for summarization.
-            custom_summarizer_prompt (Optional[str]): Custom system prompt for the summarizer model.
-            custom_summarizer_instruction (Optional[str]): Custom user instruction for the summarizer model.
+            summarizer_prompt (Optional[str]): Custom system prompt for the summarizer model.
+            summarizer_instruction (Optional[str]): Custom user instruction for the summarizer model.
             combiner_model (LLMClient): The model to use for combining summaries.
-            custom_combiner_prompt (Optional[str]): Custom prompt for the combiner model.
+            combiner_prompt (Optional[str]): Custom prompt for the combiner model.
         """
-
         chapter_metadata = Parallel(n_jobs=-1)(
             delayed(self.gpt_chapter_metadata)(chapter, 500) for chapter in self.chapters
         )
@@ -243,10 +225,10 @@ class BookSummarizer:
             delayed(summarize_chapter)(
                 chapter,
                 summarizer_model,
-                custom_summarizer_prompt,
-                custom_summarizer_instruction,
+                summarizer_prompt,
+                summarizer_instruction,
                 combiner_model,
-                custom_combiner_prompt,
+                combiner_prompt,
                 self.summarize_text_with_chunking,
             )
             for _, chapter in worthy_chapters
@@ -297,17 +279,17 @@ if __name__ == "__main__":
     summarizer.summarize_book("The_Road_to_Wigan_Pier_Summary.md")
 
     # Use a custom prompt
-    custom_system_prompt = "You are an expert in economic history analyzing George Orwell's perspectives."
-    custom_instruction = (
+    system_prompt = "You are an expert in economic history analyzing George Orwell's perspectives."
+    instruction = (
         "Highlight the key economic arguments Orwell makes in this chapter. Provide examples and evidence he uses."
     )
-    custom_summary = summarizer.summarize_text(
+    summary = summarizer.summarize_text(
         chapters[1],
         model=GPT4O(),
-        custom_system_prompt=custom_system_prompt,
-        custom_instruction=custom_instruction,
+        system_prompt=system_prompt,
+        instruction=instruction,
     )
-    print(custom_summary)
+    print(summary)
 
     # Log the most recent experiment
-    summarizer.log_recent_experiment("custom_prompting_log.md")
+    summarizer.log_recent_experiment("prompting_log.md")
