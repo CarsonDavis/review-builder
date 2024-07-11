@@ -5,6 +5,7 @@ import time
 from dotenv import load_dotenv
 from joblib import Parallel, delayed
 
+from book_summarizer.default_prompts import DEFAULT_PROMPTS
 from book_summarizer.epub_extractor import EpubExtractor
 from book_summarizer.llm_core import GPT4O, GPT35Turbo, LLMClient
 from book_summarizer.text_processing import TextProcessor, find_boolean_in_string
@@ -48,39 +49,6 @@ def summarize_chapter(
 
 
 class BookSummarizer:
-    DEFAULT_SUMMARIZER_PROMPT = (
-        "You are a skilled textual analyst that can synthesize the key concepts in "
-        "long text and identify crucial details to retain."
-    )
-    DEFAULT_SUMMARIZER_INSTRUCTION = (
-        "Make a list of the key points made by the author in the following chapter. "
-        "Under each point, list out the reasons or evidence given."
-    )
-    DEFAULT_COMBINER_PROMPT = (
-        "I will provide you with several summaries of different parts of a chapter. "
-        "Combine these summaries into one single summary. The final summary should "
-        "have a list of the key points made by the author in the following chapter. "
-        "Under each point, list out the reasons or evidence given."
-    )
-    DEFAULT_CHAPTER_PROMPT = (
-        "Your job is to deduce the title of a section of a book based on its content. "
-        "It may be a Title page, Index, Chapter, Copyright Page or any other part of a book. "
-        "Respond only with the title you have deduced and nothing else."
-        "If the chapter has a number, put it before the chapter title, as in Chapter 2: A New Dawn"
-        "If the content is not a clearly defined section of a book, write 'unknown'"
-    )
-    DEFAULT_CHAPTER_INSTRUCTION = (
-        "Here are the first 500 characters of a section of a book. Please deduce the title of this section:"
-    )
-    DEFAULT_WORTHINESS_PROMPT = (
-        "Your job is to evaluate a sample of text to see if it is part of a section worth summarizing."
-        "You respond only with boolean values: 'True' if the text is worth summarizing, 'False' if it is not."
-    )
-    DEFAULT_WORTHINESS_INSTRUCTION = (
-        "Here is are the first 500 characters of a section of a book. "
-        "Respond True if the section is a chapter, preface, or other section worth summarizing. "
-        "Respond False if the section is a title page, table of contents, or otherwise not worth summarizing."
-    )
     DEFAULT_SUMMARIZER_MODEL = GPT35Turbo()
     DEFAULT_COMBINER_MODEL = GPT4O()
 
@@ -97,6 +65,7 @@ class BookSummarizer:
         self.chapters = self.extractor.chapters
         self.recent_experiment = None
         self.text_processor = TextProcessor()
+        self.default_prompts = DEFAULT_PROMPTS
 
     def _default_save_path(self) -> str:
         return os.path.splitext(self.epub_path)[0] + "_summary.md"
@@ -109,9 +78,8 @@ class BookSummarizer:
         system_prompt: str | None = None,
         instruction: str | None = None,
     ) -> str:
-
-        system_prompt = system_prompt or self.DEFAULT_WORTHINESS_PROMPT
-        instruction = instruction or self.DEFAULT_WORTHINESS_INSTRUCTION
+        system_prompt = system_prompt or self.default_prompts["worthiness_prompt"]
+        instruction = instruction or self.default_prompts["worthiness_instruction"]
 
         instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
         worthiness_boolean = model.call(system_prompt, instruction_with_text)
@@ -136,8 +104,8 @@ class BookSummarizer:
         Returns:
             str: The deduced chapter title.
         """
-        system_prompt = system_prompt or self.DEFAULT_CHAPTER_PROMPT
-        instruction = instruction or self.DEFAULT_CHAPTER_INSTRUCTION
+        system_prompt = system_prompt or self.default_prompts["chapter_prompt"]
+        instruction = instruction or self.default_prompts["chapter_instruction"]
 
         instruction_with_text = f"{instruction}\n{chapter_text[:characters]}"
         chapter_title = model.call(system_prompt, instruction_with_text)
@@ -165,16 +133,18 @@ class BookSummarizer:
             str: The generated summary.
         """
         model = model or self.DEFAULT_SUMMARIZER_MODEL
-        system_prompt = custom_system_prompt or self.DEFAULT_SUMMARIZER_PROMPT
+        system_prompt = custom_system_prompt or self.default_prompts["summarizer_prompt"]
         instruction_with_text = (
-            f"{custom_instruction}\n{text}" if custom_instruction else f"{self.DEFAULT_SUMMARIZER_INSTRUCTION}\n{text}"
+            f"{custom_instruction}\n{text}"
+            if custom_instruction
+            else f"{self.default_prompts['summarizer_instruction']}\n{text}"
         )
 
         summary = model.call(system_prompt, instruction_with_text)
         self.recent_experiment = {
             "model": model.model_name,
             "system_prompt": system_prompt,
-            "instruction": custom_instruction or self.DEFAULT_SUMMARIZER_INSTRUCTION,
+            "instruction": custom_instruction or self.default_prompts["summarizer_instruction"],
             "summary": summary,
             "text": text,
         }
@@ -225,8 +195,8 @@ class BookSummarizer:
             combined_summary = self.summarize_text(
                 text=appended_summaries,
                 model=combiner_model or self.DEFAULT_COMBINER_MODEL,
-                custom_system_prompt=custom_summarizer_prompt or self.DEFAULT_SUMMARIZER_PROMPT,
-                custom_instruction=custom_combiner_prompt or self.DEFAULT_COMBINER_PROMPT,
+                custom_system_prompt=custom_summarizer_prompt or self.default_prompts["summarizer_prompt"],
+                custom_instruction=custom_combiner_prompt or self.default_prompts["combiner_prompt"],
             )
         else:
             combined_summary = appended_summaries
