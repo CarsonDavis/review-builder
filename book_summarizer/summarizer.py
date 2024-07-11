@@ -17,10 +17,10 @@ load_dotenv()
 def summarize_chapter(
     chapter: str,
     summarizer_model: LLMClient,
-    custom_summarizer_prompt: str,
-    custom_summarizer_instruction: str,
+    summarizer_prompt: str,
+    summarizer_instruction: str,
     combiner_model: LLMClient,
-    custom_combiner_prompt: str,
+    combiner_prompt: str,
     summarizer_func,
     max_retries: int = 5,
 ) -> str:
@@ -30,10 +30,10 @@ def summarize_chapter(
             summary = summarizer_func(
                 text=chapter,
                 summarizer_model=summarizer_model,
-                custom_summarizer_prompt=custom_summarizer_prompt,
-                custom_summarizer_instruction=custom_summarizer_instruction,
+                summarizer_prompt=summarizer_prompt,
+                summarizer_instruction=summarizer_instruction,
                 combiner_model=combiner_model,
-                custom_combiner_prompt=custom_combiner_prompt,
+                combiner_prompt=combiner_prompt,
             )
             return summary
         except Exception as e:
