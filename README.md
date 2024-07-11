@@ -4,12 +4,12 @@ I listen to a lot of nonfiction. At the end of a book, I like to consolidate all
 It's very hard to come back to a 700 page book after reading it and remember all the author's points and what I thought about them.
 
 
-### Requirements
+### Goals
 I'd like a system to:
 - give chapter by chapter summaries
 - help me find and remember key arguments, facts, and quotes
 
-I'm thinking summaries should be an intelligent synthesis, organized by the topics covered alongside the author's thoughts on each topic.
+The idea is to use the summaries as an aide to engaging with the author's key points and to stimulate my own memory.
 
 ### Restrictions
 The cost of the entire experience -- summarizing, finding quotes, ideally even some back and forth with the llm -- should cost less than $2 per book.
@@ -20,6 +20,7 @@ For reference, here is the GPT pricing structure.
 <img width="981" alt="image" src="https://github.com/CarsonDavis/review-builder/assets/14339518/d495f99d-c815-43cf-94c9-a0f1a284ea8f">
 
 ## Quick Start Tutorial
+So far, I've built out the summarization portion of the project. It makes good summaries, especially with 4o, but I think it still needs some prompt engineering to before it can perfectly satisfy my requirements.
 
 This repository contains a few useful classes, including EpubExtractor, CostCalculator, BookAnalyzer, and BookSummarizer. These classes are designed to help you extract text from EPUB files, calculate costs for processing text, analyze book statistics, and summarize chapters.
 
