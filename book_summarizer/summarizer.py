@@ -1,7 +1,7 @@
-import datetime
 import os
-import time
+from functools import wraps
 
+import weave
 from dotenv import load_dotenv
 from joblib import Parallel, delayed
 
@@ -14,6 +14,22 @@ from book_summarizer.text_processing import TextProcessor, find_boolean_in_strin
 load_dotenv()
 
 
+def conditional_wandb_log(func):
+    """this wraps the weave.op() decorator so that it is only applied if the log_to_wandb attribute is set to True"""
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if getattr(self, "log_to_wandb", False):
+            # Apply the @weave.op() decorator
+            decorated_func = weave.op()(func)
+            return decorated_func(self, *args, **kwargs)
+        else:
+            # Call the original function
+            return func(self, *args, **kwargs)
+
+    return wrapper
+
+
 def summarize_chapter(
     chapter: str,
     summarizer_model: LLMClient,
@@ -22,30 +38,15 @@ def summarize_chapter(
     combiner_model: LLMClient,
     combiner_prompt: str,
     summarizer_func,
-    max_retries: int = 5,
 ) -> str:
-    retry_count = 0
-    while retry_count < max_retries:
-        try:
-            summary = summarizer_func(
-                text=chapter,
-                summarizer_model=summarizer_model,
-                summarizer_prompt=summarizer_prompt,
-                summarizer_instruction=summarizer_instruction,
-                combiner_model=combiner_model,
-                combiner_prompt=combiner_prompt,
-            )
-            return summary
-        except Exception as e:
-            error_message = str(e)
-            if "rate limit" in error_message.lower():
-                retry_count += 1
-                wait_time = 2**retry_count  # Exponential backoff
-                print(f"Rate limit exceeded. Retrying in {wait_time} seconds...")
-                time.sleep(wait_time)
-            else:
-                return f"Error: {e}"
-    return f"Error: Rate limit exceeded after {max_retries} retries."
+    return summarizer_func(
+        text=chapter,
+        summarizer_model=summarizer_model,
+        summarizer_prompt=summarizer_prompt,
+        summarizer_instruction=summarizer_instruction,
+        combiner_model=combiner_model,
+        combiner_prompt=combiner_prompt,
+    )
 
 
 class BookSummarizer:
@@ -56,8 +57,7 @@ class BookSummarizer:
         self.epub_path = epub_path
         self.extractor = EpubExtractor(epub_path)
         self.chapters = self.extractor.chapters
-        self.recent_experiment = None
-        self.text_processor = TextProcessor()
+        self.log_to_wandb = False
 
     def _default_save_path(self) -> str:
         return os.path.splitext(self.epub_path)[0] + "_summary.md"
@@ -96,6 +96,17 @@ class BookSummarizer:
         chapter_title = model.call(system_prompt, instruction_with_text)
         return chapter_title
 
+    def deduce_chapter_metadata(self, chapter: str, deduction_limit: int) -> dict:
+        title = self._deduce_chapter_title(chapter, deduction_limit)
+        worthiness = self._deduce_worthiness(chapter, deduction_limit)
+        return {"title": title, "worthiness": worthiness, "chapter": chapter}
+
+    def log_future_calls_to_wandb(self, project_name: str = "book-summarizer") -> None:
+        """will log future calls of summarize_text to wandb."""
+        weave.init(project_name)
+        self.log_to_wandb = True
+
+    @conditional_wandb_log
     def summarize_text(
         self,
         text: str,
@@ -118,13 +129,6 @@ class BookSummarizer:
         """
         instruction_with_text = f"{instruction}\n{text}"
         summary = model.call(system_prompt, instruction_with_text)
-        self.recent_experiment = {
-            "model": model.model_name,
-            "system_prompt": system_prompt,
-            "instruction": instruction,
-            "summary": summary,
-            "text": text,
-        }
         return summary
 
     def summarize_text_with_chunking(
@@ -179,11 +183,6 @@ class BookSummarizer:
 
         return combined_summary
 
-    def gpt_chapter_metadata(self, chapter: str, deduction_limit: int) -> dict:
-        title = self._deduce_chapter_title(chapter, deduction_limit)
-        worthiness = self._deduce_worthiness(chapter, deduction_limit)
-        return {"title": title, "worthiness": worthiness, "chapter": chapter}
-
     def summarize_book(
         self,
         output_filename: str | None = None,
@@ -205,7 +204,7 @@ class BookSummarizer:
             combiner_prompt (Optional[str]): Custom prompt for the combiner model.
         """
         chapter_metadata = Parallel(n_jobs=-1)(
-            delayed(self.gpt_chapter_metadata)(chapter, 500) for chapter in self.chapters
+            delayed(self.deduce_chapter_metadata)(chapter, 500) for chapter in self.chapters
         )
 
         # Filter chapters based on worthiness
@@ -238,26 +237,6 @@ class BookSummarizer:
                 file.write("\n\n")
         print(f"Book summary saved to {output_filename}")
 
-    def log_recent_experiment(self, filename: str = "prompting_log.md") -> None:
-        """
-        Logs the most recent experiment to a file.
-
-        Args:
-            filename (str): The filename to save the log entry. If None, "prompting_log.md" is used.
-        """
-        if not self.recent_experiment:
-            print("No recent experiment to log.")
-            return
-
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(filename, "a") as file:
-            file.write(f"## Log Entry - {timestamp}\n")
-            file.write(f"**Model:** {self.recent_experiment['model']}\n")
-            file.write(f"**System Prompt:** {self.recent_experiment['system_prompt']}\n")
-            file.write(f"**Instruction:** {self.recent_experiment['instruction']}\n")
-            file.write(f"**Summary:**\n{self.recent_experiment['summary']}\n")
-            file.write("\n---\n")
-
 
 # Example usage
 if __name__ == "__main__":
@@ -283,6 +262,3 @@ if __name__ == "__main__":
         instruction=instruction,
     )
     print(summary)
-
-    # Log the most recent experiment
-    summarizer.log_recent_experiment("prompting_log.md")

@@ -47,23 +47,5 @@ def test_summarize_book(summarizer: BookSummarizer, tmp_path: Path) -> None:
     assert "error" not in content.lower(), "Error string found in summary"
 
 
-def test_log_recent_experiment(summarizer: BookSummarizer, tmp_path: Path) -> None:
-    summarizer.recent_experiment = {
-        "model": "gpt-3.5-turbo",
-        "system_prompt": "Test system prompt",
-        "instruction": "Test instruction",
-        "summary": "Test summary",
-        "text": "Test text",
-    }
-    log_path = tmp_path / "prompting_log.md"
-    summarizer.log_recent_experiment(filename=str(log_path))
-    assert log_path.exists()
-    with open(log_path) as f:
-        content = f.read()
-    assert "Test system prompt" in content
-    assert "Test instruction" in content
-    assert "Test summary" in content
-
-
 if __name__ == "__main__":
     pytest.main()
