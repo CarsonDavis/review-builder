@@ -50,9 +50,9 @@ def test_token_counts(analyzer: BookAnalyzer, mock_cost_calculator: MagicMock) -
     """
     token_counts = analyzer.token_counts()
     assert "gpt-4o" in token_counts
-    assert "gpt-3.5-turbo" in token_counts
+    assert "gpt-4o-mini" in token_counts
     assert token_counts["gpt-4o"][0] == 20
-    assert token_counts["gpt-3.5-turbo"][0] == 20
+    assert token_counts["gpt-4o-mini"][0] == 20
 
 
 def test_word_frequencies(analyzer: BookAnalyzer) -> None:

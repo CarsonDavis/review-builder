@@ -79,3 +79,9 @@ class GPT4O(GPTClient):
     model_name = "gpt-4o"
     max_tokens = 128000
     cost_per_token = 5 / 1000000
+
+
+class GPT4oMini(GPTClient):
+    model_name = "gpt-4o-mini"
+    max_tokens = 128000
+    cost_per_token = 0.15 / 1000000

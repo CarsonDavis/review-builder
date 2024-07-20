@@ -7,7 +7,7 @@ from nltk.tokenize import word_tokenize
 
 from .cost_calculator import CostCalculator
 from .epub_extractor import EpubExtractor
-from .llm_core import GPT4O, GPT35Turbo, LLMClient
+from .llm_core import GPT4O, GPT4oMini, LLMClient
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download("punkt")
@@ -30,7 +30,7 @@ class BookAnalyzer:
 
     def token_counts(self) -> dict[str, tuple[int, list[int]]]:
         token_counts = {}
-        models = [GPT35Turbo(), GPT4O()]
+        models = [GPT4oMini(), GPT4O()]
         for model in models:
             calculator = CostCalculator(model)
             total_token_count = sum(len(calculator.encoding.encode(chapter)) for chapter in self.chapters)
@@ -63,7 +63,7 @@ class BookAnalyzer:
 
             file.write("| Model | Cost |\n")
             file.write("|-------|------|\n")
-            for model in [GPT35Turbo(), GPT4O()]:
+            for model in [GPT4oMini(), GPT4O()]:
                 cost = self.calculate_cost(model)
                 file.write(f"| {model.model_name} | ${cost:.2f} |\n")
             file.write("\n")

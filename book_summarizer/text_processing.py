@@ -2,7 +2,7 @@ import re
 
 import tiktoken
 
-from book_summarizer.llm_core import GPT4O, GPT35Turbo, LLMClient
+from book_summarizer.llm_core import GPT4O, GPT4oMini, LLMClient
 
 
 def find_boolean_in_string(text: str) -> bool:
@@ -30,7 +30,7 @@ def find_boolean_in_string(text: str) -> bool:
 
 class TextProcessor:
     def __init__(self, model: LLMClient | None = None):
-        self.model = model or GPT35Turbo()
+        self.model = model or GPT4oMini()
 
     def tokenize_text(self, text: str) -> list[int]:
         encoding = tiktoken.encoding_for_model(self.model.model_name)

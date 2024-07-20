@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 
 from book_summarizer.default_prompts import DEFAULT_PROMPTS
 from book_summarizer.epub_extractor import EpubExtractor
-from book_summarizer.llm_core import GPT4O, GPT35Turbo, LLMClient
+from book_summarizer.llm_core import GPT4O, GPT4oMini, LLMClient
 from book_summarizer.text_processing import TextProcessor, find_boolean_in_string
 
 # Load the API key which OpenAI will read from the environment
@@ -47,7 +47,7 @@ class BookSummarizer:
         self,
         chapter_text: str,
         characters: int,
-        model: LLMClient = GPT35Turbo(),
+        model: LLMClient = GPT4oMini(),
         system_prompt: str = DEFAULT_PROMPTS["worthiness_prompt"],
         instruction: str = DEFAULT_PROMPTS["worthiness_instruction"],
     ) -> str:
@@ -91,7 +91,7 @@ class BookSummarizer:
     def summarize_text(
         self,
         text: str,
-        model: LLMClient = GPT35Turbo(),
+        model: LLMClient = GPT4oMini(),
         system_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
         instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
     ) -> str:
@@ -115,7 +115,7 @@ class BookSummarizer:
     def summarize_text_with_chunking(
         self,
         text: str,
-        summarizer_model: LLMClient = GPT35Turbo(),
+        summarizer_model: LLMClient = GPT4oMini(),
         summarizer_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
         summarizer_instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
         combiner_model: LLMClient = GPT4O(),
@@ -167,7 +167,7 @@ class BookSummarizer:
     def summarize_book(
         self,
         output_filename: str | None = None,
-        summarizer_model: LLMClient = GPT35Turbo(),
+        summarizer_model: LLMClient = GPT4oMini(),
         summarizer_prompt: str = DEFAULT_PROMPTS["summarizer_prompt"],
         summarizer_instruction: str = DEFAULT_PROMPTS["summarizer_instruction"],
         combiner_model: LLMClient = GPT4O(),

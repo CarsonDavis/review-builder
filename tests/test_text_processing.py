@@ -1,6 +1,6 @@
 import pytest
 
-from book_summarizer.llm_core import GPT4O, GPT35Turbo
+from book_summarizer.llm_core import GPT4O, GPT4oMini, GPT35Turbo
 from book_summarizer.text_processing import TextProcessor
 
 # Mock text and token data for testing
@@ -92,9 +92,9 @@ def test_chunk_size_larger_than_text(processor_35turbo):
 
 
 def test_default_model_initialization():
-    """Validates that TextProcessor initializes with GPT-3.5-Turbo by default."""
+    """Validates that TextProcessor initializes with GPT4oMini by default."""
     processor = TextProcessor()
-    assert isinstance(processor.model, GPT35Turbo)
+    assert isinstance(processor.model, GPT4oMini)
 
 
 def test_special_characters(processor_35turbo):
